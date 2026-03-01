@@ -1,0 +1,35 @@
+:root {
+  --primary-blue: #1a237e;
+  --primary-blue-light: #283593;
+  --gold: #ffd700;
+  --tile-bg: #0d47a1;
+  --tile-revealed: #e3f2fd;
+  --tile-letter: #1a237e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #0d1b4a 0%, #1a237e 50%, #0d1b4a 100%);
+  background-attachment: fixed;
+  color: #fff;
+  min-height: 100vh;
+}
+
+#app {
+  width: 100%;
+}
+
+button {
+  font-family: inherit;
+}
+
+input:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
