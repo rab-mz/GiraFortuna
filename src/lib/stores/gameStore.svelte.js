@@ -10,6 +10,7 @@ import {
 } from '../logic/gameEngine.js';
 import { normalizeChar, isVowel, isLetter } from '../utils/italian.js';
 import { sound } from '../audio/soundEngine.js';
+import { settings } from './settingsStore.svelte.js';
 
 function createGame() {
   // --- Players & mode ---
@@ -39,15 +40,14 @@ function createGame() {
   let lastSpinIndex = $state(null);
 
   // --- Timer ---
-  const TURN_TIME = 30;
-  let turnTimer = $state(TURN_TIME);
+  let turnTimer = $state(settings.timerSeconds);
   let timerInterval = null;
   let _onTimerExpired = null;
 
   function startTimer() {
     if (!isMultiplayer) return;
     stopTimer();
-    turnTimer = TURN_TIME;
+    turnTimer = settings.timerSeconds;
     timerInterval = setInterval(() => {
       turnTimer--;
       if (turnTimer <= 0) {
@@ -79,7 +79,7 @@ function createGame() {
   }
 
   function resetTimer() {
-    turnTimer = TURN_TIME;
+    turnTimer = settings.timerSeconds;
   }
 
   function onTimerExpired(callback) {
@@ -91,7 +91,7 @@ function createGame() {
   let consonantsLeft = $derived(getRemainingConsonants(phraseLetters, usedLetters).length > 0);
   let vowelsLeft = $derived(getRemainingVowels(phraseLetters, usedLetters).length > 0);
   let currentPlayer = $derived(players[currentPlayerIndex] || { name: '', money: 0 });
-  let canBuyVowel = $derived(hasSpunThisTurn && !hasBoughtVowelThisTurn && currentPlayer.money >= 500 && vowelsLeft && phase === 'idle');
+  let canBuyVowel = $derived(hasSpunThisTurn && !hasBoughtVowelThisTurn && currentPlayer.money >= settings.vowelCost && vowelsLeft && phase === 'idle');
   let canSpin = $derived(consonantsLeft && phase === 'idle');
   let canSolve = $derived(phase === 'idle');
 
@@ -138,7 +138,7 @@ function createGame() {
     currentRound = 1;
     totalScores = playerNames.map(() => 0);
     currentPlayerIndex = 0;
-    phraseObj = getRandomPhrase();
+    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -274,7 +274,7 @@ function createGame() {
     const norm = normalizeChar(letter);
     if (!isVowel(norm) || usedLetters.has(norm)) return;
 
-    players[currentPlayerIndex].money -= 500;
+    players[currentPlayerIndex].money -= settings.vowelCost;
     hasBoughtVowelThisTurn = true;
     usedLetters = new Set([...usedLetters, norm]);
     const count = countOccurrences(phraseObj.text, norm);
@@ -324,7 +324,7 @@ function createGame() {
   // Next round (after round_won screen)
   function nextRound() {
     currentRound++;
-    phraseObj = getRandomPhrase();
+    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -344,7 +344,7 @@ function createGame() {
   function newGame() {
     currentRound = 1;
     totalScores = players.map(() => 0);
-    phraseObj = getRandomPhrase();
+    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -408,7 +408,7 @@ function createGame() {
     hasBoughtVowelThisTurn = state.hasBoughtVowelThisTurn;
     roundWinner = state.roundWinner;
     lastSpinIndex = state.lastSpinIndex;
-    turnTimer = state.turnTimer != null ? state.turnTimer : TURN_TIME;
+    turnTimer = state.turnTimer != null ? state.turnTimer : settings.timerSeconds;
     if (state.message) {
       showMessage(state.message);
     }

@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npm run build 2>&1)",
       "Bash(npm install @supabase/supabase-js)",
-      "Bash(npx vite build 2>&1)"
+      "Bash(npx vite build 2>&1)",
+      "Bash(find /Users/baharababa/Progetti/ruota-della-fortuna/src -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" -o -name \"*.css\" \\\\\\) 2>/dev/null | sort)"
     ]
   }
 }

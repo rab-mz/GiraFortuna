@@ -85,10 +85,11 @@
       gap: 4px;
     }
     .key {
-      width: 36px;
+      width: 44px;
       height: 44px;
       font-size: 1.05rem;
       min-height: 44px;
+      min-width: 44px;
     }
   }
 </style>

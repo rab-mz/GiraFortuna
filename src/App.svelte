@@ -14,12 +14,18 @@
   import SolveModal from './components/SolveModal.svelte';
   import MessageToast from './components/MessageToast.svelte';
   import GameOverScreen from './components/GameOverScreen.svelte';
+  import CookieBanner from './components/CookieBanner.svelte';
+  import { settings } from './lib/stores/settingsStore.svelte.js';
 
-  let audioMuted = $state(false);
   let forcedSpinIndex = $state(null);
 
+  // Sync audio mute state from settings
+  $effect(() => {
+    sound.setMuted(!settings.soundEnabled);
+  });
+
   function toggleAudio() {
-    audioMuted = sound.toggleMute();
+    settings.soundEnabled = !settings.soundEnabled;
   }
 
   // Init audio context on first interaction
@@ -260,8 +266,8 @@
           {#if game.totalRounds > 1}
             <span class="round-indicator">Round {game.currentRound}/{game.totalRounds}</span>
           {/if}
-          <button class="btn-audio" onclick={toggleAudio} title={audioMuted ? 'Attiva suoni' : 'Disattiva suoni'}>
-            {audioMuted ? '🔇' : '🔊'}
+          <button class="btn-audio" onclick={toggleAudio} title={settings.soundEnabled ? 'Disattiva suoni' : 'Attiva suoni'}>
+            {settings.soundEnabled ? '🔊' : '🔇'}
           </button>
         </div>
       </div>
@@ -384,6 +390,9 @@
 
     <SolveModal
       open={game.phase === 'solving' && (!isOnline || isMyTurn)}
+      phrase={game.phraseObj.text}
+      revealedLetters={game.revealedLetters}
+      jollyRevealedPositions={game.jollyRevealedPositions}
       onSubmit={handleAttemptSolve}
       onCancel={handleCancelSolve}
     />
@@ -423,6 +432,7 @@
     {/if}
   </div>
 {/if}
+<CookieBanner />
 </div>
 
 <style>

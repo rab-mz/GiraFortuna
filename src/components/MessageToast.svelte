@@ -5,7 +5,7 @@
 </script>
 
 {#if message}
-  <div class="toast" transition:fly={{ y: -40, duration: 300 }}>
+  <div class="toast" role="status" aria-live="polite" transition:fly={{ y: -40, duration: 300 }}>
     {message}
   </div>
 {/if}
@@ -14,6 +14,7 @@
   .toast {
     position: fixed;
     top: 1rem;
+    top: calc(1rem + env(safe-area-inset-top, 0px));
     left: 50%;
     transform: translateX(-50%);
     background: linear-gradient(135deg, #1a237e, #283593);
@@ -27,6 +28,7 @@
     z-index: 200;
     box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     text-align: center;
-    white-space: nowrap;
+    max-width: 90vw;
+    white-space: normal;
   }
 </style>

@@ -1,4 +1,6 @@
 <script>
+  import { settings } from '../lib/stores/settingsStore.svelte.js';
+
   let {
     canSpin = false,
     canBuyVowel = false,
@@ -17,7 +19,7 @@
   </button>
   {#if showBuyVowel}
     <button class="btn vowel" disabled={!canBuyVowel} onclick={onBuyVowel}>
-      Compra Vocale (-500€)
+      Compra Vocale (-{settings.vowelCost}€)
     </button>
   {/if}
   <button class="btn solve" disabled={!canSolve} onclick={onSolve}>

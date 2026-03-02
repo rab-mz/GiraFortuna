@@ -349,6 +349,27 @@ export const phrases = [
   { text: "La catena alimentare", category: "Scienza e natura" },
 ];
 
-export function getRandomPhrase() {
-  return phrases[Math.floor(Math.random() * phrases.length)];
+export function getRandomPhrase(enabledCategories = null, difficulty = 'all') {
+  let pool = phrases;
+
+  // Filter by enabled categories
+  if (enabledCategories && enabledCategories.length > 0) {
+    pool = pool.filter(p => enabledCategories.includes(p.category));
+  }
+
+  // Filter by difficulty (phrase length without spaces)
+  if (difficulty !== 'all') {
+    pool = pool.filter(p => {
+      const len = p.text.replace(/\s/g, '').length;
+      if (difficulty === 'short') return len <= 15;
+      if (difficulty === 'medium') return len > 15 && len <= 25;
+      if (difficulty === 'long') return len > 25;
+      return true;
+    });
+  }
+
+  // Fallback to full list if filters are too restrictive
+  if (pool.length === 0) pool = phrases;
+
+  return pool[Math.floor(Math.random() * pool.length)];
 }

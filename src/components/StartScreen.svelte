@@ -1,10 +1,14 @@
 <script>
   import { online } from '../lib/stores/onlineStore.svelte.js';
   import HowToPlay from './HowToPlay.svelte';
+  import PrivacyPolicy from './PrivacyPolicy.svelte';
+  import SettingsModal from './SettingsModal.svelte';
 
   let { onStart = () => {}, onOnlineStart = () => {} } = $props();
 
   let showRules = $state(false);
+  let showPrivacy = $state(false);
+  let showSettings = $state(false);
 
   let mode = $state('single'); // single | multi | online
   let numPlayers = $state(2);
@@ -58,11 +62,22 @@
 </script>
 
 <div class="start-screen">
-  <div class="bg-wheel"></div>
+  <div class="bg-ring"></div>
+  <div class="bg-ring ring2"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-particles">
+    {#each Array(35) as _, i}
+      <span class="particle" style="--i:{i};--x:{5+Math.random()*90};--y:{5+Math.random()*90};--d:{3+Math.random()*5}s;--sz:{3+Math.random()*5}px;--o:{0.3+Math.random()*0.5}"></span>
+    {/each}
+  </div>
+
+  <button class="settings-btn" onclick={() => { showSettings = true; }} title="Impostazioni">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
 
   <div class="content">
     <h1 class="title">Gira<br><span>Fortuna</span></h1>
-    <p class="subtitle"></p>
+    <p class="subtitle">Gira la ruota, indovina la frase!</p>
 
     <div class="mode-selector">
       <button
@@ -280,12 +295,24 @@
         {/if}
       </div>
     {/if}
-    <button class="rules-btn" onclick={() => { showRules = true; }}>
-      Come si gioca?
-    </button>
+    <footer class="footer">
+      <button class="footer-link" onclick={() => { showRules = true; }}>
+        Come si gioca
+      </button>
+      <span class="footer-sep">·</span>
+      <button class="footer-link" onclick={() => { showSettings = true; }}>
+        Impostazioni
+      </button>
+      <span class="footer-sep">·</span>
+      <button class="footer-link" onclick={() => { showPrivacy = true; }}>
+        Privacy Policy
+      </button>
+    </footer>
   </div>
 
   <HowToPlay open={showRules} onClose={() => { showRules = false; }} />
+  <PrivacyPolicy open={showPrivacy} onClose={() => { showPrivacy = false; }} />
+  <SettingsModal open={showSettings} onClose={() => { showSettings = false; }} />
 </div>
 
 <style>
@@ -298,26 +325,87 @@
     overflow: hidden;
     padding: 2rem;
   }
-  .bg-wheel {
+  .bg-ring {
+    position: absolute;
+    width: 550px;
+    height: 550px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,215,0,0.07);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: ringRotate 40s linear infinite;
+  }
+  .bg-ring.ring2 {
+    width: 700px;
+    height: 700px;
+    border-color: rgba(255,215,0,0.04);
+    animation-duration: 60s;
+    animation-direction: reverse;
+  }
+  @keyframes ringRotate {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  .bg-glow {
     position: absolute;
     width: 600px;
     height: 600px;
     border-radius: 50%;
-    background: conic-gradient(
-      from 0deg,
-      #E74C3C, #3498DB, #2ECC71, #F39C12,
-      #9B59B6, #1ABC9C, #E67E22, #2980B9,
-      #27AE60, #F1C40F, #E74C3C, #3498DB
-    );
-    opacity: 0.06;
+    background: radial-gradient(circle, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.04) 35%, transparent 65%);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    animation: bgSpin 30s linear infinite;
+    pointer-events: none;
+    animation: glowPulse 5s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+  }
+  .bg-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
     pointer-events: none;
   }
-  @keyframes bgSpin {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
+  .particle {
+    position: absolute;
+    width: var(--sz);
+    height: var(--sz);
+    border-radius: 50%;
+    background: rgba(255,215,0, var(--o));
+    box-shadow: 0 0 6px 1px rgba(255,215,0, calc(var(--o) * 0.5));
+    left: calc(var(--x) * 1%);
+    top: calc(var(--y) * 1%);
+    animation: particleFloat var(--d) ease-in-out infinite alternate;
+    animation-delay: calc(var(--i) * -0.4s);
+  }
+  @keyframes particleFloat {
+    0% { transform: translateY(0) scale(1); opacity: var(--o); }
+    100% { transform: translateY(-40px) scale(1.4); opacity: calc(var(--o) + 0.2); }
+  }
+
+  .settings-btn {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+    z-index: 2;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: rgba(255,255,255,0.4);
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .settings-btn:hover {
+    color: #ffd700;
+    background: rgba(255,215,0,0.1);
+    border-color: rgba(255,215,0,0.3);
   }
   .content {
     position: relative;
@@ -657,20 +745,29 @@
     50% { opacity: 1; }
   }
 
-  .rules-btn {
-    display: block;
-    margin: 1.5rem auto 0;
+  .footer {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .footer-link {
     background: none;
     border: none;
     color: rgba(255,255,255,0.4);
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     cursor: pointer;
     text-decoration: underline;
     transition: color 0.2s;
   }
-  .rules-btn:hover {
+  .footer-link:hover {
     color: rgba(255,215,0,0.8);
+  }
+  .footer-sep {
+    color: rgba(255,255,255,0.2);
+    font-size: 0.85rem;
   }
 
   @media (max-width: 480px) {

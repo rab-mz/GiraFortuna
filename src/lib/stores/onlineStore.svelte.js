@@ -1,4 +1,4 @@
-import { supabase } from '../supabase.js';
+import { supabase, isSupabaseConfigured } from '../supabase.js';
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -25,6 +25,7 @@ function createOnlineStore() {
   let _onGameStart = null;
 
   function createRoom(playerName) {
+    if (!isSupabaseConfigured) { error = 'Modalita online non disponibile'; return; }
     if (channel) leaveRoom();
 
     myName = playerName;
@@ -74,6 +75,7 @@ function createOnlineStore() {
   }
 
   function joinRoom(code, playerName) {
+    if (!isSupabaseConfigured) { error = 'Modalita online non disponibile'; return; }
     if (channel) leaveRoom();
 
     myName = playerName;
@@ -195,6 +197,7 @@ function createOnlineStore() {
     get myName() { return myName; },
     get error() { return error; },
     get hostDisconnected() { return hostDisconnected; },
+    get isConfigured() { return isSupabaseConfigured; },
     createRoom,
     joinRoom,
     broadcastState,
