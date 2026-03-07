@@ -17,7 +17,7 @@
 
         <section>
           <h3>Titolare del trattamento</h3>
-          <p>Gira Fortuna (girafortuna.it) e' un gioco online gratuito. Per contatti: info@girafortuna.it</p>
+          <p>Gira la Fortuna (girafortuna.it) e' un gioco online gratuito. Per contatti: info@girafortuna.it</p>
         </section>
 
         <section>

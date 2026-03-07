@@ -256,7 +256,7 @@
     <header>
       <div class="header-top">
         <button class="btn-menu" onclick={handleGoToMenu} title="Torna al menu">← Menu</button>
-        <h1>Gira Fortuna</h1>
+        <h1>Gira la Fortuna</h1>
         <div class="header-right">
           {#if isOnline}
             <span class="online-indicator">

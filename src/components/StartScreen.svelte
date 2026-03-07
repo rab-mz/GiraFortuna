@@ -56,8 +56,11 @@
     onlineMode = null;
   }
 
+  let copied = $state(false);
   function copyRoomCode() {
     navigator.clipboard.writeText(online.roomCode);
+    copied = true;
+    setTimeout(() => { copied = false; }, 2000);
   }
 </script>
 
@@ -76,7 +79,7 @@
   </button>
 
   <div class="content">
-    <h1 class="title">Gira<br><span>Fortuna</span></h1>
+    <h1 class="title">Gira la<br><span>Fortuna</span></h1>
     <p class="subtitle">Gira la ruota, indovina la frase!</p>
 
     <div class="mode-selector">
@@ -162,6 +165,10 @@
 
     {#if mode === 'online'}
       <div class="online-setup">
+        {#if online.error}
+          <div class="online-error">{online.error}</div>
+        {/if}
+
         {#if online.mode === 'offline' && !onlineMode}
           <div class="name-inputs">
             <input
@@ -172,7 +179,7 @@
           </div>
 
           <div class="online-actions">
-            <button class="online-btn create" onclick={() => { onlineMode = 'create'; handleCreateRoom(); }}>
+            <button class="online-btn create" onclick={() => { handleCreateRoom(); if (online.error) { onlineMode = null; } else { onlineMode = 'create'; } }}>
               Crea Stanza
             </button>
             <button class="online-btn join" onclick={() => { onlineMode = 'join'; }}>
@@ -214,9 +221,12 @@
               <div class="room-code-row">
                 <span class="room-code">{online.roomCode}</span>
                 <button class="copy-btn" onclick={copyRoomCode} title="Copia codice">
-                  Copia
+                  {copied ? 'Copiato!' : 'Copia'}
                 </button>
               </div>
+              {#if copied}
+                <span class="copied-toast">Codice copiato negli appunti</span>
+              {/if}
             </div>
 
             <div class="players-lobby">
@@ -548,6 +558,17 @@
   }
 
   /* Online styles */
+  .online-error {
+    background: rgba(255,82,82,0.12);
+    border: 1px solid rgba(255,82,82,0.35);
+    color: #ff5252;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
   .online-setup {
     animation: fadeIn 0.3s ease;
   }
@@ -656,6 +677,14 @@
   }
   .copy-btn:hover {
     background: rgba(255,215,0,0.25);
+  }
+  .copied-toast {
+    display: block;
+    margin-top: 0.4rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.78rem;
+    color: #4CAF50;
+    animation: fadeIn 0.3s ease;
   }
 
   .players-lobby {
