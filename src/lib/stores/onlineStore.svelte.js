@@ -25,6 +25,7 @@ function createOnlineStore() {
   let _onGameStart = null;
   let _onPlayerJoined = null;
   let _onPlayerLeft = null;
+  let _onDiceRoll = null;
 
   // Track pending cleanup timeout so we can cancel it
   let _cleanupTimeout = null;
@@ -86,6 +87,10 @@ function createOnlineStore() {
       if (_onPlayerAction) _onPlayerAction(payload);
     });
 
+    ch.on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
+      if (_onDiceRoll) _onDiceRoll(payload);
+    });
+
     ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         isReady = true;
@@ -124,6 +129,10 @@ function createOnlineStore() {
 
     ch.on('broadcast', { event: 'host_disconnected' }, () => {
       hostDisconnected = true;
+    });
+
+    ch.on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
+      if (_onDiceRoll) _onDiceRoll(payload);
     });
 
     ch.subscribe((status) => {
@@ -168,6 +177,7 @@ function createOnlineStore() {
     });
   }
 
+
   function onStateUpdate(callback) {
     _onStateUpdate = callback;
   }
@@ -186,6 +196,15 @@ function createOnlineStore() {
 
   function onPlayerLeft(callback) {
     _onPlayerLeft = callback;
+  }
+
+  function onDiceRoll(callback) {
+    _onDiceRoll = callback;
+  }
+
+  function broadcastDiceRoll(playerIndex) {
+    if (!channel) return;
+    channel.send({ type: 'broadcast', event: 'dice_roll', payload: { playerIndex } });
   }
 
   function leaveRoom() {
@@ -241,6 +260,8 @@ function createOnlineStore() {
     broadcastState,
     broadcastGameStart,
     sendAction,
+    broadcastDiceRoll,
+    onDiceRoll,
     onStateUpdate,
     onPlayerAction,
     onGameStart,

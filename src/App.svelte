@@ -30,6 +30,7 @@
   let isMobile = $state(false);
   let showExitConfirm = $state(false);
   let diceRollData = $state(null); // {players: [{name, die1, die2}], ...metadata}
+  let remoteRollIndex = $state(-1); // set when remote player rolls dice (online sync)
   let pendingSession = $state(loadSession());
   let showResumeModal = $derived(pendingSession !== null && game.phase === 'menu');
   let currentSegments = $derived(SEEDS[game.currentSeed]?.segments ?? SEEDS.classico.segments);
@@ -125,6 +126,7 @@
 
   function handleDiceComplete(winnerIndex) {
     diceRollData = null;
+    remoteRollIndex = -1;
   }
 
   // --- Online mode helpers ---
@@ -394,6 +396,15 @@
     }
   });
 
+  // Online: sync dice rolls between players
+  online.onDiceRoll(({ playerIndex }) => {
+    remoteRollIndex = playerIndex;
+  });
+
+  function handleDiceRollBroadcast(playerIndex) {
+    online.broadcastDiceRoll(playerIndex);
+  }
+
   // Host: when a player (re)joins mid-game, re-broadcast full state so they can catch up
   online.onPlayerJoined(() => {
     if (isHost && game.phase !== 'menu') {
@@ -660,6 +671,9 @@
   <DiceRollScreen
     players={diceRollData.players}
     onComplete={handleDiceComplete}
+    myName={isOnline ? online.myName : null}
+    onDiceRoll={isOnline ? handleDiceRollBroadcast : null}
+    {remoteRollIndex}
   />
 {/if}
 {#if showResumeModal}

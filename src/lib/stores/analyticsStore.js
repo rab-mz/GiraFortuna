@@ -90,9 +90,13 @@ class Analytics {
       const utm = getUtmParams();
       const country = guessCountry(device.language);
 
-      const { data, error } = await supabase
+      // Generate session ID client-side (avoids needing SELECT after INSERT, which RLS blocks)
+      this.sessionId = crypto.randomUUID();
+
+      const { error } = await supabase
         .from('analytics_sessions')
         .insert({
+          id: this.sessionId,
           visitor_id: this.visitorId,
           referrer: document.referrer || null,
           utm_source: utm.utm_source,
@@ -106,16 +110,13 @@ class Analytics {
           screen_height: device.screen_height,
           language: device.language,
           country,
-        })
-        .select('id')
-        .single();
+        });
 
       if (error) {
         console.warn('[Analytics] Session insert failed:', error.message);
+        this.sessionId = null;
         return;
       }
-
-      this.sessionId = data.id;
       sessionStorage.setItem(SESSION_KEY, this.sessionId);
 
       // Track the page view

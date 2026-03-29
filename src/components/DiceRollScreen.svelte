@@ -6,7 +6,12 @@
   let {
     players = [], // [{name, die1, die2}, ...]
     onComplete = () => {}, // called with winnerIndex
+    myName = null, // null = local mode; string = online (only this player can click their own roll)
+    onDiceRoll = null, // callback(playerIndex) — called when local player rolls (for broadcasting)
+    remoteRollIndex = -1, // reactive: set to playerIndex when remote player rolls
   } = $props();
+
+  const isOnline = $derived(myName !== null);
 
   // Dot patterns for dice faces (3x3 grid, 1=dot, 0=empty)
   const DOTS = {
@@ -32,7 +37,8 @@
   // Interactive roll state
   let currentRoller = $state(0);
   let waitingForClick = $state(false);
-  let countdown = $state(5);
+  const COUNTDOWN_SECONDS = 8;
+  let countdown = $state(COUNTDOWN_SECONDS);
   let animating = $state(false);
   let _countdownTimer = null;
 
@@ -40,8 +46,13 @@
     return new Promise(r => setTimeout(r, ms));
   }
 
+  // In online mode, only the player whose turn it is can click
+  function isMyRoll() {
+    return !isOnline || players[currentRoller]?.name === myName;
+  }
+
   function startCountdown() {
-    countdown = 5;
+    countdown = COUNTDOWN_SECONDS;
     waitingForClick = true;
     _countdownTimer = setInterval(() => {
       countdown--;
@@ -52,6 +63,13 @@
       }
     }, 1000);
   }
+
+  // Watch for remote roll triggers (online sync)
+  $effect(() => {
+    if (remoteRollIndex >= 0 && remoteRollIndex === currentRoller && !isMyRoll() && waitingForClick && !animating) {
+      handleRoll();
+    }
+  });
 
   async function rollDice(i) {
     playerState[i] = 'rolling';
@@ -85,6 +103,11 @@
     if (_countdownTimer) {
       clearInterval(_countdownTimer);
       _countdownTimer = null;
+    }
+
+    // Broadcast to other players that this roll happened
+    if (isOnline && isMyRoll() && onDiceRoll) {
+      onDiceRoll(currentRoller);
     }
 
     await rollDice(currentRoller);
@@ -170,12 +193,18 @@
 
     {#if waitingForClick && !showWinner}
       <div class="roll-prompt" in:scale={{ duration: 250 }}>
-        <button class="roll-btn" onclick={handleRoll}>
-          {players[currentRoller].name}, Lancia!
-        </button>
+        {#if isMyRoll()}
+          <button class="roll-btn" onclick={handleRoll}>
+            {players[currentRoller].name}, Lancia!
+          </button>
+        {:else}
+          <div class="waiting-label">
+            Tocca a <strong>{players[currentRoller].name}</strong>...
+          </div>
+        {/if}
         <div class="roll-countdown">
           <div class="countdown-track">
-            <div class="countdown-fill" style="width: {(countdown / 5) * 100}%"></div>
+            <div class="countdown-fill" style="width: {(countdown / COUNTDOWN_SECONDS) * 100}%"></div>
           </div>
           <span class="countdown-num">{countdown}s</span>
         </div>
@@ -399,6 +428,16 @@
   }
   .roll-btn:active {
     transform: scale(0.97);
+  }
+  .waiting-label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1px;
+    padding: 0.9rem 2.5rem;
+  }
+  .waiting-label strong {
+    color: #ffd700;
   }
   .roll-countdown {
     display: flex;
