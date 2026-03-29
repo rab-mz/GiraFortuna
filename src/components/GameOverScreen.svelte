@@ -24,6 +24,31 @@
   let roundSortedPlayers = $derived(
     [...players].sort((a, b) => b.money - a.money)
   );
+
+  // Auto-advance countdown between rounds
+  let hasMoreRounds = $derived(!isGameOver && currentRound < totalRounds);
+  let countdown = $state(5);
+  let countdownInterval = null;
+
+  $effect(() => {
+    if (hasMoreRounds) {
+      countdown = 5;
+      countdownInterval = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          if (showActions) onNextRound();
+        }
+      }, 1000);
+      return () => {
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+      };
+    }
+  });
 </script>
 
 <div class="overlay" transition:fly={{ y: 50, duration: 400 }}>
@@ -90,12 +115,21 @@
         <p class="prize total-prize">Totale accumulato: <strong>{(totalScores[0] || 0).toLocaleString('it-IT')} €</strong></p>
       {/if}
 
-      <div class="buttons">
-        {#if showActions}
-          <button class="btn-play" onclick={onNextRound}>Round Successivo</button>
-        {/if}
-        <button class="btn-menu" onclick={onMenu}>Esci</button>
-      </div>
+      {#if hasMoreRounds}
+        <div class="countdown-bar">
+          <span class="countdown-text">Prossimo round tra <strong>{countdown}</strong>s</span>
+          <div class="countdown-track">
+            <div class="countdown-fill" style="width: {(countdown / 5) * 100}%"></div>
+          </div>
+        </div>
+      {:else}
+        <div class="buttons">
+          {#if showActions}
+            <button class="btn-play" onclick={onNextRound}>Round Successivo</button>
+          {/if}
+          <button class="btn-menu" onclick={onMenu}>Esci</button>
+        </div>
+      {/if}
     {/if}
   </div>
 </div>
@@ -259,6 +293,38 @@
   }
   .btn-menu:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
+  /* Countdown between rounds */
+  .countdown-bar {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .countdown-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 0.5px;
+  }
+  .countdown-text strong {
+    color: #ffd700;
+    font-size: 1.2rem;
+  }
+  .countdown-track {
+    width: 100%;
+    max-width: 200px;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .countdown-fill {
+    height: 100%;
+    background: #ffd700;
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
 
   @media (max-width: 480px) {
     h1 { font-size: 2rem; }

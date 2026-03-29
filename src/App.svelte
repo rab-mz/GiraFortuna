@@ -21,6 +21,10 @@
   import ExitConfirmModal from './components/ExitConfirmModal.svelte';
   import MobileGameLayout from './components/MobileGameLayout.svelte';
   import DiceRollScreen from './components/DiceRollScreen.svelte';
+  import { analytics } from './lib/stores/analyticsStore.js';
+
+  // Init analytics on mount
+  $effect(() => { analytics.init(); });
 
   let forcedSpinIndex = $state(null);
   let isMobile = $state(false);
@@ -96,6 +100,7 @@
     }
     sound.startBgMusic();
     pendingSession = null;
+    analytics.trackSessionResume();
   }
 
   function handleDismissResume() {
@@ -161,13 +166,13 @@
 
   function handleSpinResult(segment, winIndex) {
     if (isClient) {
-      // Client ignores local spin result; state comes from host
       forcedSpinIndex = null;
       return;
     }
     game.handleSpinResult(segment, winIndex);
     if (isHost) hostBroadcast();
     forcedSpinIndex = null;
+    analytics.trackSpin({ value: segment?.value ?? segment?.label, seed: game.currentSeed });
   }
 
   function handlePickConsonant(letter) {
@@ -175,7 +180,10 @@
       online.sendAction('pickConsonant', { letter });
       return;
     }
+    const before = game.revealedLetters.size;
     game.pickConsonant(letter);
+    const found = game.revealedLetters.size > before;
+    analytics.trackLetterGuess({ letter, type: 'consonant', found, count: game.revealedLetters.size - before });
     if (isHost) hostBroadcast();
   }
 
@@ -184,7 +192,10 @@
       online.sendAction('buyVowel', { letter });
       return;
     }
+    const before = game.revealedLetters.size;
     game.buyVowel(letter);
+    const found = game.revealedLetters.size > before;
+    analytics.trackLetterGuess({ letter, type: 'vowel', found, count: game.revealedLetters.size - before });
     if (isHost) hostBroadcast();
   }
 
@@ -211,7 +222,19 @@
       online.sendAction('attemptSolve', { guess });
       return;
     }
+    const phaseBefore = game.phase;
     game.attemptSolve(guess);
+    const success = game.phase === 'round_won' || game.phase === 'game_over';
+    analytics.trackPuzzleSolve({ success, phrase_length: game.phraseObj?.text?.length });
+    if (success) {
+      const scores = game.players.map(p => p.money);
+      const winner = game.roundWinner;
+      if (game.phase === 'game_over') {
+        analytics.trackGameEnd({ winner, scores, totalRounds: game.totalRounds });
+      } else {
+        analytics.trackRoundEnd({ winner, scores, round: game.currentRound, totalRounds: game.totalRounds });
+      }
+    }
     if (isHost) hostBroadcast();
   }
 
@@ -251,7 +274,7 @@
   }
 
   function handleBackButton() {
-    if (game.isMultiplayer) {
+    if (game.isMultiplayer && game.phase !== 'round_won' && game.phase !== 'game_over') {
       showExitConfirm = true;
     } else {
       handleGoToMenu();
@@ -284,11 +307,16 @@
     fullState.diceResults = dice;
     online.broadcastGameStart(fullState);
     diceRollData = { players: dice };
+    analytics.trackGameStart({ mode: 'online', playerCount: playerNames.length, seed, rounds });
+    analytics.trackRoomCreate({ roomCode: online.roomCode });
   }
 
   // --- Setup online listeners ---
   // Host: listen for player actions
   online.onPlayerAction((payload) => {
+    // Ignore stale broadcasts after leaving the room
+    if (online.mode === 'offline' || game.phase === 'menu') return;
+
     const { action, data } = payload;
     switch (action) {
       case 'startSpin': {
@@ -332,6 +360,9 @@
 
   // Client: listen for state updates
   online.onStateUpdate((remoteState) => {
+    // Ignore stale broadcasts after leaving the room
+    if (online.mode === 'offline' || game.phase === 'menu') return;
+
     // Pick up spin index before applying state, so the Wheel gets it in time
     if (remoteState.lastSpinIndex != null) {
       forcedSpinIndex = remoteState.lastSpinIndex;
@@ -342,10 +373,24 @@
 
   // Client: listen for game start
   online.onGameStart((remoteState) => {
+    // Ignore stale broadcasts after leaving the room (but NOT menu phase —
+    // game_start is specifically meant to transition from menu to game)
+    if (online.mode === 'offline') return;
+
     game.startGameFromState(remoteState);
     // Show dice animation if host sent dice results
     if (remoteState.diceResults && remoteState.diceResults.length > 1) {
       diceRollData = { players: remoteState.diceResults };
+    }
+    // Track join + game start for clients
+    if (isClient) {
+      analytics.trackRoomJoin({ roomCode: online.roomCode });
+      analytics.trackGameStart({
+        mode: 'online',
+        playerCount: remoteState.players?.length,
+        seed: remoteState.currentSeed,
+        rounds: remoteState.totalRounds,
+      });
     }
   });
 
@@ -381,6 +426,7 @@
 {#if game.phase === 'menu'}
   <StartScreen
     onStart={(names, rounds, seed) => {
+      const mode = names.length > 1 ? 'local' : 'single';
       if (names.length > 1) {
         const dice = generateDiceForPlayers(names);
         const winner = getDiceWinner(dice);
@@ -389,6 +435,7 @@
       } else {
         game.startGame(names, rounds, seed);
       }
+      analytics.trackGameStart({ mode, playerCount: names.length, seed, rounds });
     }}
     onOnlineStart={handleOnlineStart}
   />
@@ -526,7 +573,6 @@
             <p class="step-hint highlight">Valore: {game.currentSpinValue}€ — scegli una consonante!</p>
           {:else if isOnline && !isMyTurn && game.phase !== 'idle'}
             <div class="waiting-opponent">
-              <div class="waiting-spinner"></div>
               <p class="waiting-text">
                 {#if game.phase === 'spinning'}
                   {game.currentPlayer.name} sta girando la ruota...
@@ -614,6 +660,7 @@
   <DiceRollScreen
     players={diceRollData.players}
     onComplete={handleDiceComplete}
+    myName={isOnline ? online.myName : null}
   />
 {/if}
 {#if showResumeModal}
@@ -894,22 +941,10 @@
     border-radius: 10px;
     margin-top: 0.5rem;
   }
-  .waiting-spinner {
-    width: 24px;
-    height: 24px;
-    border: 3px solid rgba(255,215,0,0.15);
-    border-top-color: #ffd700;
-    border-radius: 50%;
-    animation: waitSpin 0.8s linear infinite;
-    flex-shrink: 0;
-  }
   .waiting-text {
     font-family: 'Oswald', sans-serif;
     font-size: 0.95rem;
     color: rgba(255,215,0,0.7);
     margin: 0;
-  }
-  @keyframes waitSpin {
-    to { transform: rotate(360deg); }
   }
 </style>

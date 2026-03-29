@@ -26,9 +26,26 @@ function createOnlineStore() {
   let _onPlayerJoined = null;
   let _onPlayerLeft = null;
 
+  // Track pending cleanup timeout so we can cancel it
+  let _cleanupTimeout = null;
+
+  // Immediately tear down old channel (cancel any delayed cleanup)
+  function cleanupOldChannel() {
+    if (_cleanupTimeout) {
+      clearTimeout(_cleanupTimeout);
+      _cleanupTimeout = null;
+    }
+    if (channel) {
+      const ch = channel;
+      channel = null;
+      try { ch.unsubscribe(); } catch (_) {}
+      try { supabase.removeChannel(ch); } catch (_) {}
+    }
+  }
+
   function createRoom(playerName) {
     if (!isSupabaseConfigured) { error = 'Modalita online non disponibile'; return; }
-    if (channel) leaveRoom();
+    cleanupOldChannel();
 
     myName = playerName;
     roomCode = generateRoomCode();
@@ -80,7 +97,7 @@ function createOnlineStore() {
 
   function joinRoom(code, playerName) {
     if (!isSupabaseConfigured) { error = 'Modalita online non disponibile'; return; }
-    if (channel) leaveRoom();
+    cleanupOldChannel();
 
     myName = playerName;
     roomCode = code.toUpperCase();
@@ -172,6 +189,10 @@ function createOnlineStore() {
   }
 
   function leaveRoom() {
+    if (_cleanupTimeout) {
+      clearTimeout(_cleanupTimeout);
+      _cleanupTimeout = null;
+    }
     if (channel) {
       const ch = channel;
       channel = null; // stop any further sends on the old channel
@@ -189,9 +210,10 @@ function createOnlineStore() {
         });
       }
       // Delay teardown so the broadcast above has time to be delivered
-      setTimeout(() => {
-        ch.unsubscribe();
-        supabase.removeChannel(ch);
+      _cleanupTimeout = setTimeout(() => {
+        _cleanupTimeout = null;
+        try { ch.unsubscribe(); } catch (_) {}
+        try { supabase.removeChannel(ch); } catch (_) {}
       }, 400);
     }
     mode = 'offline';

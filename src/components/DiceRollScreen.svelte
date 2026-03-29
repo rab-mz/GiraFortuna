@@ -1,11 +1,12 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { fly, scale, fade } from 'svelte/transition';
   import { sound } from '../lib/audio/soundEngine.js';
 
   let {
     players = [], // [{name, die1, die2}, ...]
     onComplete = () => {}, // called with winnerIndex
+    myName = null, // online: current player's name (null = local/single, show all buttons)
   } = $props();
 
   // Dot patterns for dice faces (3x3 grid, 1=dot, 0=empty)
@@ -23,70 +24,113 @@
   const maxTotal = Math.max(...totals);
   const winnerIndex = totals.indexOf(maxTotal);
 
-  // Animation state (initialised from props — they don't change during the animation)
+  // Animation state
   const count = players.length;
   let displayDice = $state(Array.from({ length: count }, () => ({ die1: 1, die2: 1 })));
   let playerState = $state(Array.from({ length: count }, () => 'waiting')); // waiting | rolling | landed
   let showWinner = $state(false);
 
+  // Interactive roll state
+  let currentRoller = $state(0);
+  let waitingForClick = $state(false);
+  const COUNTDOWN_SECONDS = 8;
+  let countdown = $state(COUNTDOWN_SECONDS);
+  let animating = $state(false);
+  let _countdownTimer = null;
+
   function delay(ms) {
     return new Promise(r => setTimeout(r, ms));
   }
 
-  async function animate() {
-    await delay(800);
+  // Is this player's turn to roll? (null myName = local mode, always true)
+  let isMyRoll = $derived(myName == null || players[currentRoller]?.name === myName);
 
-    for (let i = 0; i < players.length; i++) {
-      playerState[i] = 'rolling';
-      playerState = [...playerState];
-      sound.buttonClick();
-
-      // Rapid random values with deceleration
-      const steps = 14;
-      for (let s = 0; s < steps; s++) {
-        displayDice[i] = {
-          die1: Math.ceil(Math.random() * 6),
-          die2: Math.ceil(Math.random() * 6),
-        };
-        displayDice = [...displayDice];
-        if (s % 3 === 0) sound.tick();
-        await delay(55 + s * 18); // accelerate → decelerate
+  function startCountdown() {
+    countdown = COUNTDOWN_SECONDS;
+    waitingForClick = true;
+    _countdownTimer = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(_countdownTimer);
+        _countdownTimer = null;
+        // Auto-roll when timer expires (animation is local, results are pre-determined)
+        handleRoll();
       }
+    }, 1000);
+  }
 
-      // Land on final value
-      displayDice[i] = { die1: players[i].die1, die2: players[i].die2 };
+  async function rollDice(i) {
+    playerState[i] = 'rolling';
+    playerState = [...playerState];
+    sound.buttonClick();
+
+    // Rapid random values with deceleration
+    const steps = 14;
+    for (let s = 0; s < steps; s++) {
+      displayDice[i] = {
+        die1: Math.ceil(Math.random() * 6),
+        die2: Math.ceil(Math.random() * 6),
+      };
       displayDice = [...displayDice];
-      playerState[i] = 'landed';
-      playerState = [...playerState];
-      sound.letterReveal();
-
-      await delay(700);
+      if (s % 3 === 0) sound.tick();
+      await delay(55 + s * 18);
     }
 
-    // Show winner
-    await delay(400);
-    showWinner = true;
-    sound.winFanfare();
+    // Land on final value
+    displayDice[i] = { die1: players[i].die1, die2: players[i].die2 };
+    displayDice = [...displayDice];
+    playerState[i] = 'landed';
+    playerState = [...playerState];
+    sound.letterReveal();
+  }
 
-    await delay(2800);
-    onComplete(winnerIndex);
+  async function handleRoll() {
+    if (animating) return;
+    animating = true;
+    waitingForClick = false;
+    if (_countdownTimer) {
+      clearInterval(_countdownTimer);
+      _countdownTimer = null;
+    }
+
+    await rollDice(currentRoller);
+    await delay(700);
+
+    currentRoller++;
+    animating = false;
+
+    if (currentRoller < count) {
+      startCountdown();
+    } else {
+      await delay(400);
+      showWinner = true;
+      sound.winFanfare();
+      await delay(2800);
+      onComplete(winnerIndex);
+    }
   }
 
   onMount(() => {
-    animate();
+    // Small initial delay before showing first button
+    setTimeout(() => startCountdown(), 600);
+  });
+
+  onDestroy(() => {
+    if (_countdownTimer) clearInterval(_countdownTimer);
   });
 </script>
 
 <div class="overlay" transition:fade={{ duration: 300 }}>
   <div class="content" transition:scale={{ duration: 400, delay: 100 }}>
     <h2>Chi inizia per primo?</h2>
-    <p class="subtitle">Lancia i dadi!</p>
+    <p class="subtitle">Ognuno lancia i propri dadi!</p>
 
     <div class="players-list">
       {#each players as player, i}
         <div
           class="player-row"
           class:active={playerState[i] !== 'waiting'}
+          class:current={waitingForClick && i === currentRoller}
           class:winner={showWinner && i === winnerIndex}
           class:dimmed={showWinner && i !== winnerIndex}
         >
@@ -129,6 +173,24 @@
         </div>
       {/each}
     </div>
+
+    {#if waitingForClick && !showWinner}
+      <div class="roll-prompt" in:scale={{ duration: 250 }}>
+        {#if isMyRoll}
+          <button class="roll-btn" onclick={handleRoll}>
+            {players[currentRoller].name}, Lancia!
+          </button>
+        {:else}
+          <p class="waiting-roll">Tocca a <strong>{players[currentRoller].name}</strong>...</p>
+        {/if}
+        <div class="roll-countdown">
+          <div class="countdown-track">
+            <div class="countdown-fill" style="width: {(countdown / COUNTDOWN_SECONDS) * 100}%"></div>
+          </div>
+          <span class="countdown-num">{countdown}s</span>
+        </div>
+      </div>
+    {/if}
 
     {#if showWinner}
       <div class="winner-banner" in:fly={{ y: 20, duration: 400 }}>
@@ -192,14 +254,27 @@
     border-color: rgba(255,215,0,0.15);
     background: rgba(255,215,0,0.04);
   }
+  .player-row.current {
+    opacity: 1;
+    border-color: rgba(255,215,0,0.4);
+    background: rgba(255,215,0,0.06);
+    animation: currentPulse 1.5s ease-in-out infinite;
+  }
   .player-row.winner {
     border-color: #ffd700;
     background: rgba(255,215,0,0.1);
     box-shadow: 0 0 25px rgba(255,215,0,0.15);
     opacity: 1;
+    animation: none;
   }
   .player-row.dimmed {
     opacity: 0.35;
+    animation: none;
+  }
+
+  @keyframes currentPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(255,215,0,0); }
+    50% { box-shadow: 0 0 15px rgba(255,215,0,0.15); }
   }
 
   .player-left {
@@ -307,6 +382,72 @@
     text-shadow: 0 0 8px rgba(255,215,0,0.3);
   }
 
+  /* --- Roll Button & Countdown --- */
+  .waiting-roll {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.2rem;
+    color: rgba(255,255,255,0.6);
+    margin: 0;
+    padding: 0.9rem 2.5rem;
+    letter-spacing: 0.5px;
+  }
+  .waiting-roll strong {
+    color: #ffd700;
+  }
+  .roll-prompt {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .roll-btn {
+    padding: 0.9rem 2.5rem;
+    background: linear-gradient(135deg, #ffd700, #e6b800);
+    color: #1a237e;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1.5px;
+    transition: transform 0.15s;
+    box-shadow: 0 4px 18px rgba(255,215,0,0.35);
+  }
+  .roll-btn:hover {
+    transform: scale(1.05);
+  }
+  .roll-btn:active {
+    transform: scale(0.97);
+  }
+  .roll-countdown {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 160px;
+  }
+  .countdown-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .countdown-fill {
+    height: 100%;
+    background: rgba(255,215,0,0.5);
+    border-radius: 2px;
+    transition: width 1s linear;
+  }
+  .countdown-num {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.4);
+    min-width: 1.5rem;
+    text-align: right;
+  }
+
   /* --- Winner Banner --- */
   .winner-banner {
     font-family: 'Oswald', sans-serif;
@@ -353,5 +494,6 @@
     .total { font-size: 1.2rem; }
     .winner-banner { font-size: 1.1rem; padding: 0.6rem 1rem; }
     .winner-name { font-size: 1.3rem; }
+    .roll-btn { font-size: 1.1rem; padding: 0.7rem 2rem; }
   }
 </style>

@@ -37,9 +37,6 @@
   } = $props();
 
   // Phase-based visibility
-  let showWheel = $derived(
-    game.phase === 'idle' || game.phase === 'spinning'
-  );
   let showPicker = $derived(
     (game.phase === 'picking_consonant' || game.phase === 'picking_vowel') &&
     (!isOnline || isMyTurn)
@@ -167,13 +164,12 @@
 
     {#if showWaiting}
       <div class="waiting-area" in:fade={{ duration: 250 }} out:fade={{ duration: 150 }}>
-        <div class="waiting-spinner"></div>
         <p class="waiting-text">{waitingMessage()}</p>
       </div>
     {/if}
 
-    <!-- Wheel: hidden via CSS when not needed to preserve canvas state -->
-    <div class="wheel-area" class:hidden={!showWheel}>
+    <!-- Wheel: always visible to prevent canvas freeze from mount/unmount -->
+    <div class="wheel-area">
       <Wheel
         segments={currentSegments}
         spinning={game.phase === 'spinning'}
@@ -186,7 +182,7 @@
   </div>
 
   <!-- Step hint (between wheel and action bar) -->
-  {#if game.phase === 'idle' && (!isOnline || isMyTurn) && showWheel}
+  {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
     <p class="step-hint" in:fade={{ duration: 200 }}>
       {#if !game.consonantsLeft && !game.vowelsLeft}
         Tutte le lettere note — risolvi la frase!
@@ -452,10 +448,6 @@
     display: flex;
     justify-content: center;
     width: 100%;
-    transition: opacity 0.2s;
-  }
-  .wheel-area.hidden {
-    display: none;
   }
 
   /* --- Picker Area --- */
@@ -547,14 +539,6 @@
     gap: 0.8rem;
     padding: 2rem 1rem;
   }
-  .waiting-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid rgba(255,215,0,0.15);
-    border-top-color: #ffd700;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
   .waiting-text {
     font-family: 'Oswald', sans-serif;
     font-size: 1rem;
@@ -562,10 +546,6 @@
     text-align: center;
     margin: 0;
     letter-spacing: 0.5px;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
   }
 
   @keyframes pulse {
