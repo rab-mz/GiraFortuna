@@ -524,6 +524,23 @@
             </p>
           {:else if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
             <p class="step-hint highlight">Valore: {game.currentSpinValue}€ — scegli una consonante!</p>
+          {:else if isOnline && !isMyTurn && game.phase !== 'idle'}
+            <div class="waiting-opponent">
+              <div class="waiting-spinner"></div>
+              <p class="waiting-text">
+                {#if game.phase === 'spinning'}
+                  {game.currentPlayer.name} sta girando la ruota...
+                {:else if game.phase === 'picking_consonant'}
+                  {game.currentPlayer.name} sta scegliendo una consonante...
+                {:else if game.phase === 'picking_vowel'}
+                  {game.currentPlayer.name} sta comprando una vocale...
+                {:else if game.phase === 'picking_jolly'}
+                  {game.currentPlayer.name} sta usando il Jolly...
+                {:else if game.phase === 'solving'}
+                  {game.currentPlayer.name} sta provando a risolvere...
+                {/if}
+              </p>
+            </div>
           {/if}
 
           <div class="picker-desktop">
@@ -865,4 +882,34 @@
 
   /* Desktop only: picker beside wheel */
   .picker-desktop { display: contents; }
+
+  /* Waiting for opponent (online) */
+  .waiting-opponent {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.8rem 1.2rem;
+    background: rgba(255,215,0,0.05);
+    border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 10px;
+    margin-top: 0.5rem;
+  }
+  .waiting-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255,215,0,0.15);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: waitSpin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+  .waiting-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.95rem;
+    color: rgba(255,215,0,0.7);
+    margin: 0;
+  }
+  @keyframes waitSpin {
+    to { transform: rotate(360deg); }
+  }
 </style>

@@ -53,6 +53,22 @@
   let pickerMode = $derived(
     game.phase === 'picking_vowel' ? 'vowel' : 'consonant'
   );
+
+  // Waiting message when it's the opponent's turn (online only)
+  let opponentName = $derived(game.currentPlayer?.name ?? '');
+  let waitingMessage = $derived(() => {
+    if (!isOnline || isMyTurn) return null;
+    switch (game.phase) {
+      case 'spinning': return `${opponentName} sta girando la ruota...`;
+      case 'picking_consonant': return `${opponentName} sta scegliendo una consonante...`;
+      case 'picking_vowel': return `${opponentName} sta comprando una vocale...`;
+      case 'picking_jolly': return `${opponentName} sta usando il Jolly...`;
+      case 'solving': return `${opponentName} sta provando a risolvere...`;
+      case 'idle': return `Turno di ${opponentName}`;
+      default: return null;
+    }
+  });
+  let showWaiting = $derived(isOnline && !isMyTurn && waitingMessage() !== null);
 </script>
 
 <div class="mobile-app">
@@ -146,6 +162,13 @@
           usedLetters={game.usedLetters}
           onPick={pickerMode === 'vowel' ? onBuyVowel : onPickConsonant}
         />
+      </div>
+    {/if}
+
+    {#if showWaiting}
+      <div class="waiting-area" in:fade={{ duration: 250 }} out:fade={{ duration: 150 }}>
+        <div class="waiting-spinner"></div>
+        <p class="waiting-text">{waitingMessage()}</p>
       </div>
     {/if}
 
@@ -512,6 +535,37 @@
     background: rgba(13, 27, 74, 0.95);
     backdrop-filter: blur(10px);
     border-top: 1px solid rgba(255,215,0,0.12);
+  }
+
+  /* --- Waiting for opponent --- */
+  .waiting-area {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 2rem 1rem;
+  }
+  .waiting-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255,215,0,0.15);
+    border-top-color: #ffd700;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .waiting-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1rem;
+    color: rgba(255,215,0,0.7);
+    text-align: center;
+    margin: 0;
+    letter-spacing: 0.5px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
   }
 
   @keyframes pulse {

@@ -283,11 +283,11 @@ export const phrases = [
   { text: "La vera ricchezza e la conoscenza", category: "Frase celebre" },
 
   // ===== SERIE TV (20) =====
-  { text: "Gomorra la serie", category: "Serie TV" },
+  { text: "Gomorra", category: "Serie TV" },
   { text: "Boris dietro le quinte", category: "Serie TV" },
   { text: "L'amica geniale", category: "Serie TV" },
   { text: "Mare fuori", category: "Serie TV" },
-  { text: "Suburra la serie", category: "Serie TV" },
+  { text: "Suburra", category: "Serie TV" },
   { text: "Doc nelle tue mani", category: "Serie TV" },
   { text: "Che Dio ci aiuti", category: "Serie TV" },
   { text: "Un medico in famiglia", category: "Serie TV" },
