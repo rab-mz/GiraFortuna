@@ -1,5 +1,6 @@
 <script>
   import { online } from '../lib/stores/onlineStore.svelte.js';
+  import { SEED_LIST } from '../lib/logic/wheelSeeds.js';
   import HowToPlay from './HowToPlay.svelte';
   import PrivacyPolicy from './PrivacyPolicy.svelte';
   import SettingsModal from './SettingsModal.svelte';
@@ -14,6 +15,7 @@
   let numPlayers = $state(2);
   let playerNames = $state(['', '']);
   let numRounds = $state(1);
+  let selectedSeed = $state('classico');
 
   // Online state
   let onlineMode = $state(null); // null | 'create' | 'join'
@@ -28,10 +30,10 @@
 
   function handleStart() {
     if (mode === 'single') {
-      onStart(['Giocatore'], numRounds);
+      onStart(['Giocatore'], numRounds, selectedSeed);
     } else if (mode === 'multi') {
       const names = playerNames.map((n, i) => n.trim() || `Giocatore ${i + 1}`);
-      onStart(names, numRounds);
+      onStart(names, numRounds, selectedSeed);
     }
   }
 
@@ -48,7 +50,7 @@
 
   function handleOnlineStart() {
     const playerNames = online.connectedPlayers.map(p => p.name);
-    onOnlineStart(playerNames, onlineRounds);
+    onOnlineStart(playerNames, onlineRounds, selectedSeed);
   }
 
   function handleBackToOnline() {
@@ -102,6 +104,22 @@
         Online
       </button>
     </div>
+
+    {#if mode !== 'online'}
+      <div class="seed-select">
+        <span>Variante:</span>
+        <div class="seed-btns">
+          {#each SEED_LIST as seed}
+            <button
+              class="seed-btn" class:active={selectedSeed === seed.id}
+              title={seed.description}
+              onclick={() => { selectedSeed = seed.id; }}
+            >{seed.name}</button>
+          {/each}
+        </div>
+        <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
+      </div>
+    {/if}
 
     {#if mode === 'multi'}
       <div class="multi-setup">
@@ -254,6 +272,20 @@
                   >{n}</button>
                 {/each}
               </div>
+            </div>
+
+            <div class="seed-select">
+              <span>Variante:</span>
+              <div class="seed-btns">
+                {#each SEED_LIST as seed}
+                  <button
+                    class="seed-btn" class:active={selectedSeed === seed.id}
+                    title={seed.description}
+                    onclick={() => { selectedSeed = seed.id; }}
+                  >{seed.name}</button>
+                {/each}
+              </div>
+              <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
             </div>
 
             <button
@@ -488,6 +520,55 @@
   }
   .round-select {
     margin-bottom: 1.5rem;
+  }
+  .seed-select {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 1.5rem;
+  }
+  .seed-select > span {
+    color: rgba(255,255,255,0.7);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+  }
+  .seed-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    justify-content: center;
+    margin-top: 0.2rem;
+  }
+  .seed-btn {
+    padding: 0.35rem 0.9rem;
+    border-radius: 8px;
+    border: 2px solid rgba(255,215,0,0.3);
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.6);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .seed-btn.active {
+    background: rgba(255,215,0,0.2);
+    color: #ffd700;
+    border-color: #ffd700;
+  }
+  .seed-btn:hover:not(.active) {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.85);
+  }
+  .seed-desc {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    margin: 0;
+    text-align: center;
+    min-height: 1.1em;
+    padding: 0 0.5rem;
   }
   .num-btns {
     display: flex;

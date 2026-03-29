@@ -65,6 +65,29 @@
             </div>
           </div>
         </section>
+
+        <section>
+          <h3>Varianti della ruota</h3>
+          <p>Prima di iniziare puoi scegliere una variante per cambiare il comportamento della ruota:</p>
+          <div class="variants">
+            <div class="variant-item">
+              <strong class="variant-name">Classico</strong>
+              <span>Il gioco standard. Premi da 100 a 1000, Passa, Bancarotta e Jolly.</span>
+            </div>
+            <div class="variant-item">
+              <strong class="variant-name">Jackpot</strong>
+              <span>Premi altissimi, nessuna Bancarotta. Adatto ai principianti!</span>
+            </div>
+            <div class="variant-item">
+              <strong class="variant-name">Rischio</strong>
+              <span>Molte Bancarotte e Passa. Solo per i coraggiosi!</span>
+            </div>
+            <div class="variant-item">
+              <strong class="variant-name">Maledizione</strong>
+              <span>Ogni Bancarotta raddoppia le probabilita di Bancarotta e Passa per tutti. La ruota diventa sempre piu pericolosa!</span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   </div>
@@ -204,6 +227,27 @@
     line-height: 1.4;
   }
   .mode-item strong {
+    color: #ffd700;
+  }
+  .variants {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  .variant-item {
+    font-family: 'Inter', sans-serif;
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    padding: 0.5rem 0.8rem;
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    line-height: 1.4;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .variant-name {
     color: #ffd700;
   }
 

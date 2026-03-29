@@ -2,7 +2,7 @@
   import { game } from './lib/stores/gameStore.svelte.js';
   import { online } from './lib/stores/onlineStore.svelte.js';
   import { sound } from './lib/audio/soundEngine.js';
-  import { segments } from './lib/logic/wheelSegments.js';
+  import { SEEDS } from './lib/logic/wheelSeeds.js';
   import StartScreen from './components/StartScreen.svelte';
   import Wheel from './components/Wheel.svelte';
   import PuzzleBoard from './components/PuzzleBoard.svelte';
@@ -16,8 +16,38 @@
   import GameOverScreen from './components/GameOverScreen.svelte';
   import CookieBanner from './components/CookieBanner.svelte';
   import { settings } from './lib/stores/settingsStore.svelte.js';
+  import { saveSession, loadSession, loadOnlineSession, clearSession } from './lib/stores/sessionStore.js';
+  import ResumeModal from './components/ResumeModal.svelte';
+  import ExitConfirmModal from './components/ExitConfirmModal.svelte';
+  import MobileGameLayout from './components/MobileGameLayout.svelte';
+  import DiceRollScreen from './components/DiceRollScreen.svelte';
 
   let forcedSpinIndex = $state(null);
+  let isMobile = $state(false);
+  let showExitConfirm = $state(false);
+  let diceRollData = $state(null); // {players: [{name, die1, die2}], ...metadata}
+  let pendingSession = $state(loadSession());
+  let showResumeModal = $derived(pendingSession !== null && game.phase === 'menu');
+  let currentSegments = $derived(SEEDS[game.currentSeed]?.segments ?? SEEDS.classico.segments);
+
+  function getWeightedSpinIndex() {
+    const segs = currentSegments;
+    if (game.currentSeed !== 'maledizione' || game.bankruptCount === 0) {
+      return Math.floor(Math.random() * segs.length);
+    }
+    const weights = segs.map(seg => {
+      if (seg.value === 'bancarotta') return Math.pow(2, game.bankruptCount);
+      if (seg.value === 'passa') return Math.pow(2, Math.ceil(game.bankruptCount / 2));
+      return 1;
+    });
+    const total = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * total;
+    for (let i = 0; i < weights.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return i;
+    }
+    return weights.length - 1;
+  }
 
   // Sync audio mute state from settings
   $effect(() => {
@@ -35,6 +65,61 @@
       sound.getCtx();
       audioInited = true;
     }
+  }
+
+  // --- Mobile detection ---
+  $effect(() => {
+    const mq = window.matchMedia('(max-width: 640px)');
+    isMobile = mq.matches;
+    const handler = (e) => { isMobile = e.matches; };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  });
+
+  // --- Session persistence ---
+  $effect(() => {
+    const phase = game.phase;
+    if (phase !== 'menu') {
+      const onlineInfo = online.mode !== 'offline'
+        ? { roomCode: online.roomCode, mode: online.mode, playerName: online.myName }
+        : null;
+      saveSession(game.getSerializableState(), onlineInfo);
+    }
+  });
+
+  function handleResume() {
+    if (!pendingSession) return;
+    game.restoreFromSession(pendingSession.gameState);
+    const onlineSess = loadOnlineSession();
+    if (onlineSess && onlineSess.mode === 'client') {
+      online.joinRoom(onlineSess.roomCode, onlineSess.playerName);
+    }
+    sound.startBgMusic();
+    pendingSession = null;
+  }
+
+  function handleDismissResume() {
+    clearSession();
+    pendingSession = null;
+  }
+
+  // --- Dice roll helpers ---
+  function generateDiceForPlayers(names) {
+    return names.map(name => ({
+      name,
+      die1: Math.ceil(Math.random() * 6),
+      die2: Math.ceil(Math.random() * 6),
+    }));
+  }
+
+  function getDiceWinner(diceResults) {
+    const totals = diceResults.map(d => d.die1 + d.die2);
+    const max = Math.max(...totals);
+    return totals.indexOf(max); // first with max = tiebreak
+  }
+
+  function handleDiceComplete(winnerIndex) {
+    diceRollData = null;
   }
 
   // --- Online mode helpers ---
@@ -66,7 +151,7 @@
     }
     if (isHost) {
       // Pre-determine spin result so we can broadcast it immediately
-      const winIndex = Math.floor(Math.random() * segments.length);
+      const winIndex = getWeightedSpinIndex();
       forcedSpinIndex = winIndex;
       game.setSpinIndex(winIndex);
     }
@@ -165,17 +250,40 @@
     }
   }
 
+  function handleBackButton() {
+    if (game.isMultiplayer) {
+      showExitConfirm = true;
+    } else {
+      handleGoToMenu();
+    }
+  }
+
+  function handleConfirmExit() {
+    showExitConfirm = false;
+    handleGoToMenu();
+  }
+
+  function handleCancelExit() {
+    showExitConfirm = false;
+  }
+
   function handleGoToMenu() {
     game.goToMenu();
+    clearSession();
     if (isOnline) {
       online.leaveRoom();
     }
   }
 
   // --- Online start (host starts the game) ---
-  function handleOnlineStart(playerNames, rounds) {
-    game.startGame(playerNames, rounds);
-    online.broadcastGameStart(game.getSerializableState());
+  function handleOnlineStart(playerNames, rounds, seed) {
+    const dice = generateDiceForPlayers(playerNames);
+    const winner = getDiceWinner(dice);
+    game.startGame(playerNames, rounds, seed, winner);
+    const fullState = game.getSerializableState();
+    fullState.diceResults = dice;
+    online.broadcastGameStart(fullState);
+    diceRollData = { players: dice };
   }
 
   // --- Setup online listeners ---
@@ -184,7 +292,7 @@
     const { action, data } = payload;
     switch (action) {
       case 'startSpin': {
-        const winIndex = Math.floor(Math.random() * segments.length);
+        const winIndex = getWeightedSpinIndex();
         forcedSpinIndex = winIndex;
         game.setSpinIndex(winIndex);
         game.startSpin();
@@ -235,6 +343,30 @@
   // Client: listen for game start
   online.onGameStart((remoteState) => {
     game.startGameFromState(remoteState);
+    // Show dice animation if host sent dice results
+    if (remoteState.diceResults && remoteState.diceResults.length > 1) {
+      diceRollData = { players: remoteState.diceResults };
+    }
+  });
+
+  // Host: when a player (re)joins mid-game, re-broadcast full state so they can catch up
+  online.onPlayerJoined(() => {
+    if (isHost && game.phase !== 'menu') {
+      online.broadcastGameStart(game.getSerializableState());
+    }
+  });
+
+  // Host: when a player leaves mid-game, remove them and broadcast
+  online.onPlayerLeft((playerName) => {
+    if (isHost && game.phase !== 'menu') {
+      game.removePlayer(playerName);
+      // If game ended (last player wins), broadcast game_start so clients get full state
+      if (game.phase === 'game_over') {
+        online.broadcastGameStart(game.getSerializableState());
+      } else {
+        hostBroadcast();
+      }
+    }
   });
 
   // Host: broadcast when timer expires (nextTurn was called inside gameStore)
@@ -248,20 +380,52 @@
 <div onclick={initAudio}>
 {#if game.phase === 'menu'}
   <StartScreen
-    onStart={(names, rounds) => game.startGame(names, rounds)}
+    onStart={(names, rounds, seed) => {
+      if (names.length > 1) {
+        const dice = generateDiceForPlayers(names);
+        const winner = getDiceWinner(dice);
+        game.startGame(names, rounds, seed, winner);
+        diceRollData = { players: dice };
+      } else {
+        game.startGame(names, rounds, seed);
+      }
+    }}
     onOnlineStart={handleOnlineStart}
+  />
+{:else if isMobile}
+  <MobileGameLayout
+    {game}
+    {online}
+    {isOnline}
+    {isMyTurn}
+    {isHost}
+    {isClient}
+    {currentSegments}
+    forcedSpinIndex={forcedSpinIndex}
+    onStartSpin={handleStartSpin}
+    onSpinResult={handleSpinResult}
+    onPickConsonant={handlePickConsonant}
+    onBuyVowel={handleBuyVowel}
+    onStartBuyVowel={handleStartBuyVowel}
+    onStartSolve={handleStartSolve}
+    onAttemptSolve={handleAttemptSolve}
+    onCancelSolve={handleCancelSolve}
+    onUseJolly={handleUseJolly}
+    onGoToMenu={handleBackButton}
+    onNextRound={handleNextRound}
+    onNewGame={handleNewGame}
+    onToggleAudio={toggleAudio}
   />
 {:else}
   <div class="app">
     <header>
       <div class="header-top">
-        <button class="btn-menu" onclick={handleGoToMenu} title="Torna al menu">← Menu</button>
+        <button class="btn-menu" onclick={handleBackButton} title="Torna al menu">← Menu</button>
         <h1>Gira la Fortuna</h1>
         <div class="header-right">
           {#if isOnline}
-            <span class="online-indicator">
-              ONLINE
-            </span>
+            <span class="online-indicator">ONLINE</span>
+            <span class="room-code-badge" title="Codice stanza">{online.roomCode}</span>
           {/if}
           {#if game.totalRounds > 1}
             <span class="round-indicator">Round {game.currentRound}/{game.totalRounds}</span>
@@ -324,28 +488,9 @@
         </div>
       {/if}
 
-      {#if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
-        <div class="picker-mobile">
-          <LetterPicker
-            mode="consonant"
-            usedLetters={game.usedLetters}
-            onPick={handlePickConsonant}
-          />
-        </div>
-      {/if}
-
-      {#if game.phase === 'picking_vowel' && (!isOnline || isMyTurn)}
-        <div class="picker-mobile">
-          <LetterPicker
-            mode="vowel"
-            usedLetters={game.usedLetters}
-            onPick={handleBuyVowel}
-          />
-        </div>
-      {/if}
-
       <div class="game-area">
         <Wheel
+          segments={currentSegments}
           spinning={game.phase === 'spinning'}
           canSpin={game.canSpin && (!isOnline || isMyTurn)}
           forcedResult={isOnline ? forcedSpinIndex : null}
@@ -358,12 +503,28 @@
             canSpin={game.canSpin && (!isOnline || isMyTurn)}
             canBuyVowel={game.canBuyVowel && (!isOnline || isMyTurn)}
             canSolve={game.canSolve && (!isOnline || isMyTurn)}
-            showBuyVowel={game.hasSpunThisTurn}
+            showBuyVowel={game.vowelsLeft && !game.hasBoughtVowelThisRound}
             onSpin={handleStartSpin}
             onBuyVowel={handleStartBuyVowel}
             onSolve={handleStartSolve}
             playerName={game.isMultiplayer ? game.currentPlayer.name : ''}
           />
+
+          {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
+            <p class="step-hint">
+              {#if !game.consonantsLeft && !game.vowelsLeft}
+                Tutte le lettere note — risolvi la frase!
+              {:else if !game.consonantsLeft}
+                Nessuna consonante rimasta — compra una vocale o risolvi!
+              {:else if !game.hasSpunThisTurn}
+                Gira la ruota per iniziare il turno
+              {:else}
+                Puoi girare di nuovo, comprare una vocale o risolvere
+              {/if}
+            </p>
+          {:else if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
+            <p class="step-hint highlight">Valore: {game.currentSpinValue}€ — scegli una consonante!</p>
+          {/if}
 
           <div class="picker-desktop">
             {#if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
@@ -432,6 +593,25 @@
     {/if}
   </div>
 {/if}
+{#if diceRollData}
+  <DiceRollScreen
+    players={diceRollData.players}
+    onComplete={handleDiceComplete}
+  />
+{/if}
+{#if showResumeModal}
+  <ResumeModal
+    session={pendingSession}
+    onResume={handleResume}
+    onDismiss={handleDismissResume}
+  />
+{/if}
+<ExitConfirmModal
+  open={showExitConfirm}
+  {isOnline}
+  onConfirm={handleConfirmExit}
+  onCancel={handleCancelExit}
+/>
 <CookieBanner />
 </div>
 
@@ -469,6 +649,19 @@
     border-radius: 6px;
     padding: 0.2rem 0.5rem;
     letter-spacing: 1px;
+  }
+  .room-code-badge {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffd700;
+    background: rgba(255,215,0,0.1);
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 6px;
+    padding: 0.2rem 0.6rem;
+    letter-spacing: 2px;
+    cursor: default;
+    user-select: all;
   }
   .round-indicator {
     font-family: 'Oswald', sans-serif;
@@ -653,25 +846,23 @@
     50% { box-shadow: 0 0 25px rgba(0,230,118,0.3); }
   }
 
-  /* Mobile: picker above wheel, desktop: picker beside wheel */
-  .picker-mobile { display: none; }
+  .step-hint {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.82rem;
+    color: rgba(255,215,0,0.65);
+    text-align: center;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid rgba(255,215,0,0.12);
+    border-radius: 8px;
+    background: rgba(255,215,0,0.04);
+    margin: 0;
+  }
+  .step-hint.highlight {
+    color: #00e676;
+    border-color: rgba(0,230,118,0.2);
+    background: rgba(0,230,118,0.04);
+  }
+
+  /* Desktop only: picker beside wheel */
   .picker-desktop { display: contents; }
-
-  @media (max-width: 640px) {
-    h1 { font-size: 1.1rem; }
-    .game-area { flex-direction: column; align-items: center; }
-    .actions { min-width: auto; width: 100%; }
-    .app { padding: 0.5rem; }
-    .jolly-banner { font-size: 0.95rem; padding: 0.6rem 1rem; }
-    .jolly-icon { width: 32px; height: 32px; font-size: 1.4rem; }
-    .picker-mobile { display: block; }
-    .picker-desktop { display: none; }
-  }
-
-  @media (max-width: 400px) {
-    h1 { font-size: 0.95rem; letter-spacing: 0; }
-    .header-top { gap: 0.4rem; }
-    .btn-menu { font-size: 0.7rem; padding: 0.3rem 0.5rem; }
-    .round-indicator { font-size: 0.75rem; padding: 0.15rem 0.4rem; }
-  }
 </style>

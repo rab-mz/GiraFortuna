@@ -28,12 +28,15 @@ function createGame() {
   let revealedLetters = $state(new Set());
   let usedLetters = $state(new Set());
   let jollyRevealedPositions = $state(new Set());
+  let currentSeed = $state('classico');
+  let bankruptCount = $state(0);
   // phases: menu | idle | spinning | picking_consonant | picking_vowel | picking_jolly | solving | round_won | game_over
   let phase = $state('menu');
   let currentSpinValue = $state(null);
   let message = $state('');
   let hasSpunThisTurn = $state(false);
-  let hasBoughtVowelThisTurn = $state(false);
+  // Tracks which player indices have already bought a vowel this round
+  let boughtVowelThisRound = $state(new Set());
   let roundWinner = $state(null);
 
   // --- Online spin sync ---
@@ -91,7 +94,8 @@ function createGame() {
   let consonantsLeft = $derived(getRemainingConsonants(phraseLetters, usedLetters).length > 0);
   let vowelsLeft = $derived(getRemainingVowels(phraseLetters, usedLetters).length > 0);
   let currentPlayer = $derived(players[currentPlayerIndex] || { name: '', money: 0 });
-  let canBuyVowel = $derived(hasSpunThisTurn && !hasBoughtVowelThisTurn && currentPlayer.money >= settings.vowelCost && vowelsLeft && phase === 'idle');
+  let hasBoughtVowelThisRound = $derived(boughtVowelThisRound.has(currentPlayerIndex));
+  let canBuyVowel = $derived(!hasBoughtVowelThisRound && currentPlayer.money >= settings.vowelCost && vowelsLeft && phase === 'idle');
   let canSpin = $derived(consonantsLeft && phase === 'idle');
   let canSolve = $derived(phase === 'idle');
 
@@ -123,7 +127,6 @@ function createGame() {
 
   function nextTurn() {
     hasSpunThisTurn = false;
-    hasBoughtVowelThisTurn = false;
     if (isMultiplayer) {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     }
@@ -132,25 +135,32 @@ function createGame() {
   }
 
   // --- Setup ---
-  function startGame(playerNames, rounds = 1) {
+  function startGame(playerNames, rounds = 1, seed = 'classico', firstPlayerIndex = null) {
     players = playerNames.map(name => ({ name, money: 0 }));
     totalRounds = rounds;
     currentRound = 1;
     totalScores = playerNames.map(() => 0);
-    currentPlayerIndex = 0;
+    currentPlayerIndex = firstPlayerIndex != null
+      ? firstPlayerIndex
+      : (players.length > 1 ? Math.floor(Math.random() * players.length) : 0);
+    currentSeed = seed;
+    bankruptCount = 0;
     phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
     currentSpinValue = null;
     hasSpunThisTurn = false;
-    hasBoughtVowelThisTurn = false;
+    boughtVowelThisRound = new Set();
     roundWinner = null;
     lastSpinIndex = null;
     message = '';
     phase = 'idle';
     startTimer();
     sound.startBgMusic();
+    if (players.length > 1) {
+      showMessage(`${players[currentPlayerIndex].name} inizia per primo!`, 3000);
+    }
   }
 
   // Start game from remote state (for online clients)
@@ -188,6 +198,7 @@ function createGame() {
     } else if (segment.value === 'bancarotta') {
       sound.bankruptcy();
       players[currentPlayerIndex].money = 0;
+      bankruptCount++;
       showMessage(isMultiplayer
         ? `BANCAROTTA! ${currentPlayer.name} perde tutto!`
         : 'BANCAROTTA! Hai perso tutto!');
@@ -208,26 +219,16 @@ function createGame() {
   function useJolly(absoluteIndex) {
     if (phase !== 'picking_jolly') return;
 
-    // Get the character at this position
     const char = phraseObj.text[absoluteIndex];
     if (!char || !isLetter(char)) return;
     const norm = normalizeChar(char);
 
-    // Check if already revealed (by letter or by jolly position)
-    if (revealedLetters.has(norm)) return;
-    if (jollyRevealedPositions.has(absoluteIndex)) return;
+    if (usedLetters.has(norm)) return;
 
-    // Reveal this specific position
-    jollyRevealedPositions = new Set([...jollyRevealedPositions, absoluteIndex]);
     sound.letterReveal();
+    revealedLetters = new Set([...revealedLetters, norm]);
+    usedLetters = new Set([...usedLetters, norm]);
 
-    // Check if ALL occurrences of this letter are now revealed
-    if (isLetterFullyRevealed(phraseObj.text, norm, revealedLetters, jollyRevealedPositions)) {
-      revealedLetters = new Set([...revealedLetters, norm]);
-      usedLetters = new Set([...usedLetters, norm]);
-    }
-
-    // Check win
     if (isPhraseComplete(phraseObj.text, revealedLetters, jollyRevealedPositions)) {
       handleWin();
       return;
@@ -275,7 +276,7 @@ function createGame() {
     if (!isVowel(norm) || usedLetters.has(norm)) return;
 
     players[currentPlayerIndex].money -= settings.vowelCost;
-    hasBoughtVowelThisTurn = true;
+    boughtVowelThisRound = new Set([...boughtVowelThisRound, currentPlayerIndex]);
     usedLetters = new Set([...usedLetters, norm]);
     const count = countOccurrences(phraseObj.text, norm);
 
@@ -330,19 +331,23 @@ function createGame() {
     jollyRevealedPositions = new Set();
     currentSpinValue = null;
     hasSpunThisTurn = false;
-    hasBoughtVowelThisTurn = false;
+    boughtVowelThisRound = new Set();
     roundWinner = null;
     lastSpinIndex = null;
     message = '';
     players.forEach(p => { p.money = 0; });
-    currentPlayerIndex = 0;
+    currentPlayerIndex = players.length > 1 ? Math.floor(Math.random() * players.length) : 0;
     phase = 'idle';
     startTimer();
+    if (players.length > 1) {
+      showMessage(`${players[currentPlayerIndex].name} inizia il round!`, 3000);
+    }
   }
 
   // Restart entire game (from game_over)
   function newGame() {
     currentRound = 1;
+    bankruptCount = 0;
     totalScores = players.map(() => 0);
     phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
@@ -350,14 +355,58 @@ function createGame() {
     jollyRevealedPositions = new Set();
     currentSpinValue = null;
     hasSpunThisTurn = false;
-    hasBoughtVowelThisTurn = false;
+    boughtVowelThisRound = new Set();
     roundWinner = null;
     lastSpinIndex = null;
     message = '';
     players.forEach(p => { p.money = 0; });
-    currentPlayerIndex = 0;
+    currentPlayerIndex = players.length > 1 ? Math.floor(Math.random() * players.length) : 0;
     phase = 'idle';
     startTimer();
+    if (players.length > 1) {
+      showMessage(`${players[currentPlayerIndex].name} inizia per primo!`, 3000);
+    }
+  }
+
+  function removePlayer(name) {
+    const idx = players.findIndex(p => p.name === name);
+    if (idx === -1) return;
+
+    players = players.filter((_, i) => i !== idx);
+    totalScores = totalScores.filter((_, i) => i !== idx);
+
+    // Shift boughtVowelThisRound indices
+    const newBought = new Set();
+    for (const i of boughtVowelThisRound) {
+      if (i < idx) newBought.add(i);
+      else if (i > idx) newBought.add(i - 1);
+    }
+    boughtVowelThisRound = newBought;
+
+    // If only 1 player left, they win
+    if (players.length <= 1) {
+      stopTimer();
+      if (players.length === 1) {
+        showMessage(`${name} ha abbandonato. ${players[0].name} vince la partita!`, 4000);
+        roundWinner = { ...players[0] };
+        totalScores[0] += players[0].money;
+        phase = 'game_over';
+        sound.winFanfare();
+      }
+      return;
+    }
+
+    showMessage(`${name} ha abbandonato la partita.`, 3000);
+
+    // Adjust currentPlayerIndex
+    if (idx < currentPlayerIndex) {
+      currentPlayerIndex--;
+    } else if (idx === currentPlayerIndex) {
+      currentPlayerIndex = currentPlayerIndex % players.length;
+      hasSpunThisTurn = false;
+      phase = 'idle';
+      startTimer();
+    }
   }
 
   function setSpinIndex(idx) {
@@ -379,11 +428,13 @@ function createGame() {
       phase,
       currentSpinValue,
       hasSpunThisTurn,
-      hasBoughtVowelThisTurn,
+      boughtVowelThisRound: [...boughtVowelThisRound],
       roundWinner,
       lastSpinIndex,
       turnTimer,
       message,
+      currentSeed,
+      bankruptCount,
     };
   }
 
@@ -405,10 +456,12 @@ function createGame() {
     phase = state.phase;
     currentSpinValue = state.currentSpinValue;
     hasSpunThisTurn = state.hasSpunThisTurn;
-    hasBoughtVowelThisTurn = state.hasBoughtVowelThisTurn;
+    boughtVowelThisRound = new Set(state.boughtVowelThisRound ?? []);
     roundWinner = state.roundWinner;
     lastSpinIndex = state.lastSpinIndex;
     turnTimer = state.turnTimer != null ? state.turnTimer : settings.timerSeconds;
+    if (state.currentSeed) currentSeed = state.currentSeed;
+    if (state.bankruptCount !== undefined) bankruptCount = state.bankruptCount;
     if (state.message) {
       showMessage(state.message);
     }
@@ -416,6 +469,35 @@ function createGame() {
     const activePhases = ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly', 'solving'];
     if (turnTimer > 0 && activePhases.includes(phase)) {
       startDisplayTimer();
+    }
+  }
+
+  function restoreFromSession(savedState) {
+    stopTimer();
+    players = savedState.players.map(p => ({ name: p.name, money: p.money }));
+    currentPlayerIndex = savedState.currentPlayerIndex;
+    currentRound = savedState.currentRound;
+    totalRounds = savedState.totalRounds;
+    totalScores = [...savedState.totalScores];
+    phraseObj = { text: savedState.phraseObj.text, category: savedState.phraseObj.category };
+    revealedLetters = new Set(savedState.revealedLetters);
+    usedLetters = new Set(savedState.usedLetters);
+    jollyRevealedPositions = new Set(savedState.jollyRevealedPositions);
+    phase = savedState.phase;
+    currentSpinValue = savedState.currentSpinValue;
+    hasSpunThisTurn = savedState.hasSpunThisTurn;
+    boughtVowelThisRound = new Set(savedState.boughtVowelThisRound ?? []);
+    roundWinner = savedState.roundWinner;
+    lastSpinIndex = savedState.lastSpinIndex;
+    turnTimer = savedState.turnTimer != null ? savedState.turnTimer : settings.timerSeconds;
+    if (savedState.currentSeed) currentSeed = savedState.currentSeed;
+    if (savedState.bankruptCount !== undefined) bankruptCount = savedState.bankruptCount;
+    message = '';
+
+    // Restart timer for multiplayer active phases
+    const activePhases = ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly'];
+    if (players.length > 1 && activePhases.includes(phase)) {
+      startTimer();
     }
   }
 
@@ -440,10 +522,15 @@ function createGame() {
     get totalRounds() { return totalRounds; },
     get totalScores() { return totalScores; },
     get roundWinner() { return roundWinner; },
+    get vowelsLeft() { return vowelsLeft; },
+    get currentSeed() { return currentSeed; },
+    get bankruptCount() { return bankruptCount; },
+    get hasBoughtVowelThisRound() { return hasBoughtVowelThisRound; },
     get hasSpunThisTurn() { return hasSpunThisTurn; },
     get turnTimer() { return turnTimer; },
     get lastSpinIndex() { return lastSpinIndex; },
     setSpinIndex,
+    removePlayer,
     startGame,
     startGameFromState,
     goToMenu,
@@ -461,6 +548,7 @@ function createGame() {
     getSerializableState,
     applyRemoteState,
     onTimerExpired,
+    restoreFromSession,
   };
 }
 

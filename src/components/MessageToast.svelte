@@ -31,4 +31,14 @@
     max-width: 90vw;
     white-space: normal;
   }
+
+  @media (max-width: 640px) {
+    .toast {
+      top: auto;
+      bottom: 1rem;
+      bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+      font-size: 1rem;
+      padding: 0.6rem 1.5rem;
+    }
+  }
 </style>

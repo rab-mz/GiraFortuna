@@ -1,8 +1,7 @@
 <script>
-  import { segments } from '../lib/logic/wheelSegments.js';
   import { sound } from '../lib/audio/soundEngine.js';
 
-  let { spinning = false, canSpin = false, forcedResult = null, onSpin = () => {}, onResult = () => {} } = $props();
+  let { segments = [], spinning = false, canSpin = false, forcedResult = null, onSpin = () => {}, onResult = () => {} } = $props();
 
   let canvas;
   let wrapper;
@@ -12,8 +11,8 @@
 
   // Responsive size
   let cssSize = $state(280);
-  const numSeg = segments.length;
-  const arc = (2 * Math.PI) / numSeg;
+  let numSeg = $derived(segments.length);
+  let arc = $derived(numSeg > 0 ? (2 * Math.PI) / numSeg : 0);
 
   function updateSize() {
     if (typeof window === 'undefined') return;
@@ -31,9 +30,9 @@
     return () => window.removeEventListener('resize', handler);
   });
 
-  // Redraw wheel when canvas exists or size changes
+  // Redraw wheel when canvas exists, size changes, or segments change
   $effect(() => {
-    if (!canvas) return;
+    if (!canvas || !segments.length) return;
     const dpr = window.devicePixelRatio || 1;
     const s = cssSize * dpr;
     canvas.width = s;
