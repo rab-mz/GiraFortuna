@@ -660,7 +660,6 @@
   <DiceRollScreen
     players={diceRollData.players}
     onComplete={handleDiceComplete}
-    myName={isOnline ? online.myName : null}
   />
 {/if}
 {#if showResumeModal}

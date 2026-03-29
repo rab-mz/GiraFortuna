@@ -6,7 +6,6 @@
   let {
     players = [], // [{name, die1, die2}, ...]
     onComplete = () => {}, // called with winnerIndex
-    myName = null, // online: current player's name (null = local/single, show all buttons)
   } = $props();
 
   // Dot patterns for dice faces (3x3 grid, 1=dot, 0=empty)
@@ -33,8 +32,7 @@
   // Interactive roll state
   let currentRoller = $state(0);
   let waitingForClick = $state(false);
-  const COUNTDOWN_SECONDS = 8;
-  let countdown = $state(COUNTDOWN_SECONDS);
+  let countdown = $state(5);
   let animating = $state(false);
   let _countdownTimer = null;
 
@@ -42,18 +40,14 @@
     return new Promise(r => setTimeout(r, ms));
   }
 
-  // Is this player's turn to roll? (null myName = local mode, always true)
-  let isMyRoll = $derived(myName == null || players[currentRoller]?.name === myName);
-
   function startCountdown() {
-    countdown = COUNTDOWN_SECONDS;
+    countdown = 5;
     waitingForClick = true;
     _countdownTimer = setInterval(() => {
       countdown--;
       if (countdown <= 0) {
         clearInterval(_countdownTimer);
         _countdownTimer = null;
-        // Auto-roll when timer expires (animation is local, results are pre-determined)
         handleRoll();
       }
     }, 1000);
@@ -176,16 +170,12 @@
 
     {#if waitingForClick && !showWinner}
       <div class="roll-prompt" in:scale={{ duration: 250 }}>
-        {#if isMyRoll}
-          <button class="roll-btn" onclick={handleRoll}>
-            {players[currentRoller].name}, Lancia!
-          </button>
-        {:else}
-          <p class="waiting-roll">Tocca a <strong>{players[currentRoller].name}</strong>...</p>
-        {/if}
+        <button class="roll-btn" onclick={handleRoll}>
+          {players[currentRoller].name}, Lancia!
+        </button>
         <div class="roll-countdown">
           <div class="countdown-track">
-            <div class="countdown-fill" style="width: {(countdown / COUNTDOWN_SECONDS) * 100}%"></div>
+            <div class="countdown-fill" style="width: {(countdown / 5) * 100}%"></div>
           </div>
           <span class="countdown-num">{countdown}s</span>
         </div>
@@ -383,17 +373,6 @@
   }
 
   /* --- Roll Button & Countdown --- */
-  .waiting-roll {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.2rem;
-    color: rgba(255,255,255,0.6);
-    margin: 0;
-    padding: 0.9rem 2.5rem;
-    letter-spacing: 0.5px;
-  }
-  .waiting-roll strong {
-    color: #ffd700;
-  }
   .roll-prompt {
     display: flex;
     flex-direction: column;
