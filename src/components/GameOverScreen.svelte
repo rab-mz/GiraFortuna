@@ -1,5 +1,6 @@
 <script>
   import { fly, scale } from 'svelte/transition';
+  import DailyResultCard from './DailyResultCard.svelte';
 
   let {
     winner = { name: '', money: 0 },
@@ -11,6 +12,10 @@
     totalScores = [],
     isGameOver = false,
     showActions = true,
+    isDailyGame = false,
+    dailyResult = null,
+    dailyStreak = 0,
+    dailyShareText = '',
     onNextRound = () => {},
     onNewGame = () => {},
     onMenu = () => {},
@@ -56,10 +61,19 @@
 
     {#if isGameOver}
       <!-- Final game over -->
-      <h1>FINE DEL GIOCO!</h1>
+      <h1>{isDailyGame ? 'COMPLIMENTI!' : 'FINE DEL GIOCO!'}</h1>
       <p class="phrase">"{phrase}"</p>
 
-      {#if isMultiplayer}
+      {#if isDailyGame && dailyResult}
+        <DailyResultCard
+          result={dailyResult}
+          streak={dailyStreak}
+          shareText={dailyShareText}
+        />
+        <div class="buttons">
+          <button class="btn-menu" onclick={onMenu}>Menu</button>
+        </div>
+      {:else if isMultiplayer}
         <div class="leaderboard">
           <h3>Classifica Finale</h3>
           {#each sortedPlayers as player, i}
@@ -70,19 +84,24 @@
             </div>
           {/each}
         </div>
+        <div class="buttons">
+          {#if showActions}
+            <button class="btn-play" onclick={onNewGame}>Gioca Ancora</button>
+          {/if}
+          <button class="btn-menu" onclick={onMenu}>Esci</button>
+        </div>
       {:else}
         <p class="prize">Vincita ultimo round: <strong>{winner.money.toLocaleString('it-IT')} €</strong></p>
         {#if totalRounds > 1}
           <p class="prize total-prize final">Totale finale: <strong>{(totalScores[0] || 0).toLocaleString('it-IT')} €</strong></p>
         {/if}
+        <div class="buttons">
+          {#if showActions}
+            <button class="btn-play" onclick={onNewGame}>Gioca Ancora</button>
+          {/if}
+          <button class="btn-menu" onclick={onMenu}>Esci</button>
+        </div>
       {/if}
-
-      <div class="buttons">
-        {#if showActions}
-          <button class="btn-play" onclick={onNewGame}>Gioca Ancora</button>
-        {/if}
-        <button class="btn-menu" onclick={onMenu}>Esci</button>
-      </div>
 
     {:else}
       <!-- Round won -->

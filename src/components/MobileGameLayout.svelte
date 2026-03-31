@@ -34,6 +34,10 @@
     onNextRound = () => {},
     onNewGame = () => {},
     onToggleAudio = () => {},
+    isDailyMode = false,
+    dailyResult = null,
+    dailyStreak = 0,
+    dailyShareText = '',
   } = $props();
 
   // Phase-based visibility
@@ -253,6 +257,10 @@
       totalScores={game.totalScores}
       isGameOver={true}
       showActions={!isClient}
+      isDailyGame={isDailyMode}
+      {dailyResult}
+      {dailyStreak}
+      {dailyShareText}
       onNextRound={onNextRound}
       onNewGame={onNewGame}
       onMenu={onGoToMenu}

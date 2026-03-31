@@ -135,7 +135,7 @@ function createGame() {
   }
 
   // --- Setup ---
-  function startGame(playerNames, rounds = 1, seed = 'classico', firstPlayerIndex = null) {
+  function startGame(playerNames, rounds = 1, seed = 'classico', firstPlayerIndex = null, phraseOverride = null) {
     players = playerNames.map(name => ({ name, money: 0 }));
     totalRounds = rounds;
     currentRound = 1;
@@ -145,7 +145,7 @@ function createGame() {
       : (players.length > 1 ? Math.floor(Math.random() * players.length) : 0);
     currentSeed = seed;
     bankruptCount = 0;
-    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
+    phraseObj = phraseOverride || getRandomPhrase(settings.enabledCategories, settings.difficulty);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -514,7 +514,6 @@ function createGame() {
     get currentSpinValue() { return currentSpinValue; },
     get message() { return message; },
     get consonantsLeft() { return consonantsLeft; },
-    get vowelsLeft() { return vowelsLeft; },
     get canBuyVowel() { return canBuyVowel; },
     get canSpin() { return canSpin; },
     get canSolve() { return canSolve; },

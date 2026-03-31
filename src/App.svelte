@@ -1,8 +1,10 @@
 <script>
   import { game } from './lib/stores/gameStore.svelte.js';
   import { online } from './lib/stores/onlineStore.svelte.js';
+  import { daily } from './lib/stores/dailyStore.svelte.js';
   import { sound } from './lib/audio/soundEngine.js';
   import { SEEDS } from './lib/logic/wheelSeeds.js';
+  import { getLettersInPhrase } from './lib/logic/gameEngine.js';
   import StartScreen from './components/StartScreen.svelte';
   import Wheel from './components/Wheel.svelte';
   import PuzzleBoard from './components/PuzzleBoard.svelte';
@@ -34,6 +36,21 @@
   let pendingSession = $state(loadSession());
   let showResumeModal = $derived(pendingSession !== null && game.phase === 'menu');
   let currentSegments = $derived(SEEDS[game.currentSeed]?.segments ?? SEEDS.classico.segments);
+  let isDailyMode = $state(false);
+  let dailyRecorded = $state(false);
+
+  // Record daily result when daily game ends
+  $effect(() => {
+    if (isDailyMode && game.phase === 'game_over' && !dailyRecorded) {
+      dailyRecorded = true;
+      const totalLetters = getLettersInPhrase(game.phraseObj.text).size;
+      daily.recordResult({
+        score: game.roundWinner?.money ?? 0,
+        usedLettersCount: game.revealedLetters.size,
+        totalLetters,
+      });
+    }
+  });
 
   function getWeightedSpinIndex() {
     const segs = currentSegments;
@@ -88,13 +105,25 @@
       const onlineInfo = online.mode !== 'offline'
         ? { roomCode: online.roomCode, mode: online.mode, playerName: online.myName }
         : null;
-      saveSession(game.getSerializableState(), onlineInfo);
+      const state = game.getSerializableState();
+      if (isDailyMode) state._dailyDate = new Date().toISOString().slice(0, 10);
+      saveSession(state, onlineInfo);
     }
   });
 
   function handleResume() {
     if (!pendingSession) return;
-    game.restoreFromSession(pendingSession.gameState);
+    const gs = pendingSession.gameState;
+    // If it was a daily game from a different day, discard
+    if (gs._dailyDate && gs._dailyDate !== new Date().toISOString().slice(0, 10)) {
+      handleDismissResume();
+      return;
+    }
+    if (gs._dailyDate) {
+      isDailyMode = true;
+      dailyRecorded = false;
+    }
+    game.restoreFromSession(gs);
     const onlineSess = loadOnlineSession();
     if (onlineSess && onlineSess.mode === 'client') {
       online.joinRoom(onlineSess.roomCode, onlineSess.playerName);
@@ -107,6 +136,14 @@
   function handleDismissResume() {
     clearSession();
     pendingSession = null;
+  }
+
+  function handleDailyStart() {
+    const phrase = daily.getDailyPhrase();
+    isDailyMode = true;
+    dailyRecorded = false;
+    game.startGame(['Giocatore'], 1, 'classico', null, phrase);
+    analytics.trackGameStart({ mode: 'daily', playerCount: 1, seed: 'classico', rounds: 1 });
   }
 
   // --- Dice roll helpers ---
@@ -295,6 +332,8 @@
   function handleGoToMenu() {
     game.goToMenu();
     clearSession();
+    isDailyMode = false;
+    dailyRecorded = false;
     if (isOnline) {
       online.leaveRoom();
     }
@@ -437,6 +476,7 @@
 {#if game.phase === 'menu'}
   <StartScreen
     onStart={(names, rounds, seed) => {
+      isDailyMode = false;
       const mode = names.length > 1 ? 'local' : 'single';
       if (names.length > 1) {
         const dice = generateDiceForPlayers(names);
@@ -449,6 +489,7 @@
       analytics.trackGameStart({ mode, playerCount: names.length, seed, rounds });
     }}
     onOnlineStart={handleOnlineStart}
+    onDailyStart={handleDailyStart}
   />
 {:else if isMobile}
   <MobileGameLayout
@@ -459,6 +500,10 @@
     {isHost}
     {isClient}
     {currentSegments}
+    {isDailyMode}
+    dailyResult={daily.dailyResult}
+    dailyStreak={daily.streak}
+    dailyShareText={daily.getShareText()}
     forcedSpinIndex={forcedSpinIndex}
     onStartSpin={handleStartSpin}
     onSpinResult={handleSpinResult}
@@ -660,6 +705,10 @@
         totalScores={game.totalScores}
         isGameOver={true}
         showActions={!isClient}
+        isDailyGame={isDailyMode}
+        dailyResult={daily.dailyResult}
+        dailyStreak={daily.streak}
+        dailyShareText={daily.getShareText()}
         onNextRound={handleNextRound}
         onNewGame={handleNewGame}
         onMenu={handleGoToMenu}

@@ -1,15 +1,20 @@
 <script>
   import { online } from '../lib/stores/onlineStore.svelte.js';
+  import { daily } from '../lib/stores/dailyStore.svelte.js';
   import { SEED_LIST } from '../lib/logic/wheelSeeds.js';
   import HowToPlay from './HowToPlay.svelte';
   import PrivacyPolicy from './PrivacyPolicy.svelte';
   import SettingsModal from './SettingsModal.svelte';
+  import StatsModal from './StatsModal.svelte';
+  import DailyResultCard from './DailyResultCard.svelte';
 
-  let { onStart = () => {}, onOnlineStart = () => {} } = $props();
+  let { onStart = () => {}, onOnlineStart = () => {}, onDailyStart = () => {} } = $props();
 
   let showRules = $state(false);
   let showPrivacy = $state(false);
   let showSettings = $state(false);
+  let showStats = $state(false);
+  let showDailyResult = $state(false);
 
   let mode = $state('single'); // single | multi | online
   let numPlayers = $state(2);
@@ -83,6 +88,29 @@
   <div class="content">
     <h1 class="title">Gira la<br><span>Fortuna</span></h1>
     <p class="subtitle">Gira la ruota, indovina la frase!</p>
+
+    <button
+      class="daily-btn"
+      onclick={() => {
+        if (daily.hasPlayedToday) {
+          showDailyResult = true;
+        } else {
+          onDailyStart();
+        }
+      }}
+    >
+      <span class="daily-icon">☀️</span>
+      <span class="daily-text">
+        {#if daily.hasPlayedToday}
+          VEDI RISULTATO
+        {:else}
+          FRASE DEL GIORNO
+        {/if}
+      </span>
+      {#if daily.streak > 0}
+        <span class="streak-badge">🔥 {daily.streak}</span>
+      {/if}
+    </button>
 
     <div class="mode-selector">
       <button
@@ -342,6 +370,10 @@
         Come si gioca
       </button>
       <span class="footer-sep">·</span>
+      <button class="footer-link" onclick={() => { showStats = true; }}>
+        Statistiche
+      </button>
+      <span class="footer-sep">·</span>
       <button class="footer-link" onclick={() => { showSettings = true; }}>
         Impostazioni
       </button>
@@ -355,6 +387,16 @@
   <HowToPlay open={showRules} onClose={() => { showRules = false; }} />
   <PrivacyPolicy open={showPrivacy} onClose={() => { showPrivacy = false; }} />
   <SettingsModal open={showSettings} onClose={() => { showSettings = false; }} />
+  <StatsModal open={showStats} stats={daily.stats} streak={daily.streak} onClose={() => { showStats = false; }} />
+  {#if showDailyResult}
+    <DailyResultCard
+      result={daily.dailyResult}
+      streak={daily.streak}
+      shareText={daily.getShareText()}
+      isModal={true}
+      onClose={() => { showDailyResult = false; }}
+    />
+  {/if}
 </div>
 
 <style>
@@ -878,6 +920,64 @@
   .footer-sep {
     color: rgba(255,255,255,0.2);
     font-size: 0.85rem;
+  }
+
+  /* Daily button */
+  .daily-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.9rem 1.2rem;
+    background: linear-gradient(135deg, rgba(255,152,0,0.2), rgba(255,193,7,0.12));
+    border: 2px solid rgba(255,152,0,0.5);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .daily-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,193,7,0.08), transparent);
+    animation: dailyShimmer 3s ease-in-out infinite;
+  }
+  @keyframes dailyShimmer {
+    0%, 100% { transform: translateX(-100%); }
+    50% { transform: translateX(100%); }
+  }
+  .daily-btn:hover {
+    background: linear-gradient(135deg, rgba(255,152,0,0.3), rgba(255,193,7,0.2));
+    border-color: rgba(255,152,0,0.7);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(255,152,0,0.2);
+  }
+  .daily-icon {
+    font-size: 1.3rem;
+    position: relative;
+  }
+  .daily-text {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #ffb300;
+    letter-spacing: 2px;
+    position: relative;
+  }
+  .streak-badge {
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ff6d00;
+    background: rgba(255,109,0,0.15);
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255,109,0,0.3);
+    position: relative;
   }
 
   @media (max-width: 480px) {
