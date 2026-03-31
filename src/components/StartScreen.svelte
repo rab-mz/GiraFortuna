@@ -1,6 +1,7 @@
 <script>
   import { online } from '../lib/stores/onlineStore.svelte.js';
   import { daily } from '../lib/stores/dailyStore.svelte.js';
+  import { generalStats } from '../lib/stores/generalStatsStore.svelte.js';
   import { SEED_LIST } from '../lib/logic/wheelSeeds.js';
   import HowToPlay from './HowToPlay.svelte';
   import PrivacyPolicy from './PrivacyPolicy.svelte';
@@ -387,7 +388,7 @@
   <HowToPlay open={showRules} onClose={() => { showRules = false; }} />
   <PrivacyPolicy open={showPrivacy} onClose={() => { showPrivacy = false; }} />
   <SettingsModal open={showSettings} onClose={() => { showSettings = false; }} />
-  <StatsModal open={showStats} stats={daily.stats} streak={daily.streak} onClose={() => { showStats = false; }} />
+  <StatsModal open={showStats} stats={daily.stats} streak={daily.streak} generalStats={generalStats.stats} matchHistory={generalStats.history} onClose={() => { showStats = false; }} />
   {#if showDailyResult}
     <DailyResultCard
       result={daily.dailyResult}

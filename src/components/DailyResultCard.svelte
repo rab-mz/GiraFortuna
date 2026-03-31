@@ -1,5 +1,6 @@
 <script>
   import { fly, scale } from 'svelte/transition';
+  import { isLetter, normalizeChar } from '../lib/utils/italian.js';
 
   let {
     result = null,
@@ -11,17 +12,53 @@
 
   let shared = $state(false);
 
-  async function handleShare() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: shareText });
-        shared = true;
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareText);
-      shared = true;
-      setTimeout(() => { shared = false; }, 2500);
+  // Build phrase tiles: each char becomes {char, revealed, isLetter, isSpace}
+  let phraseTiles = $derived.by(() => {
+    if (!result?.phraseText) return [];
+    const revealed = new Set(result.revealedLetters || []);
+    const jolly = new Set(result.jollyPositions || []);
+    const tiles = [];
+    let pos = 0;
+    for (const ch of result.phraseText) {
+      if (ch === ' ') {
+        tiles.push({ type: 'space' });
+      } else if (isLetter(ch)) {
+        const norm = normalizeChar(ch);
+        tiles.push({
+          type: 'letter',
+          char: ch.toUpperCase(),
+          revealed: revealed.has(norm) || jolly.has(pos),
+        });
+      } else {
+        tiles.push({ type: 'punct', char: ch });
+      }
+      pos++;
     }
+    return tiles;
+  });
+
+  // Group tiles into words for wrapping
+  let words = $derived.by(() => {
+    const groups = [];
+    let current = [];
+    for (const tile of phraseTiles) {
+      if (tile.type === 'space') {
+        if (current.length) groups.push(current);
+        current = [];
+      } else {
+        current.push(tile);
+      }
+    }
+    if (current.length) groups.push(current);
+    return groups;
+  });
+
+  async function handleShare() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+    } catch {}
+    shared = true;
+    setTimeout(() => { shared = false; }, 2500);
   }
 </script>
 
@@ -48,20 +85,42 @@
     <span class="daily-number">#{result.dailyNumber}</span>
   </div>
 
-  <div class="stats-grid">
-    <div class="stat">
+  <!-- Phrase preview grid -->
+  <div class="phrase-preview">
+    {#each words as word, wi}
+      <div class="preview-word">
+        {#each word as tile}
+          {#if tile.type === 'letter'}
+            <div class="mini-tile" class:revealed={tile.revealed} class:hidden={!tile.revealed}>
+              {#if tile.revealed}
+                <span>{tile.char}</span>
+              {/if}
+            </div>
+          {:else}
+            <span class="mini-punct">{tile.char}</span>
+          {/if}
+        {/each}
+      </div>
+      {#if wi < words.length - 1}
+        <div class="preview-space"></div>
+      {/if}
+    {/each}
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-box">
       <span class="stat-icon">📂</span>
       <span class="stat-value">{result.category}</span>
     </div>
-    <div class="stat">
+    <div class="stat-box">
       <span class="stat-icon">💰</span>
       <span class="stat-value score">{result.score.toLocaleString('it-IT')}€</span>
     </div>
-    <div class="stat">
+    <div class="stat-box">
       <span class="stat-icon">🔤</span>
-      <span class="stat-value">{result.usedLettersCount}/{result.totalLetters} lettere</span>
+      <span class="stat-value">{result.revealedCount}/{result.totalCount} lettere</span>
     </div>
-    <div class="stat">
+    <div class="stat-box">
       <span class="stat-icon">🔥</span>
       <span class="stat-value streak">{streak} {streak === 1 ? 'giorno' : 'giorni'}</span>
     </div>
@@ -92,9 +151,9 @@
   }
   .card, .card-inline {
     text-align: center;
-    max-width: 360px;
+    max-width: 380px;
     width: 100%;
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1.2rem;
     background: linear-gradient(135deg, rgba(26,35,126,0.95), rgba(13,27,74,0.98));
     border: 2px solid rgba(255,215,0,0.3);
     border-radius: 16px;
@@ -109,7 +168,7 @@
     align-items: center;
     justify-content: center;
     gap: 0.6rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
   .daily-label {
     font-family: 'Oswald', sans-serif;
@@ -127,33 +186,84 @@
     border-radius: 12px;
     border: 1px solid rgba(255,215,0,0.2);
   }
-  .stats-grid {
+
+  /* Phrase preview grid */
+  .phrase-preview {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    padding: 0.8rem 0.5rem;
+    background: rgba(0,0,0,0.25);
+    border-radius: 10px;
+    border: 1px solid rgba(255,215,0,0.15);
+    margin-bottom: 1rem;
+  }
+  .preview-word {
+    display: flex;
+    gap: 2px;
+  }
+  .preview-space {
+    width: 8px;
+  }
+  .mini-tile {
+    width: 20px;
+    height: 24px;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .mini-tile.revealed {
+    background: rgba(227,242,253,0.9);
+    color: #1a237e;
+    border: 1px solid rgba(255,215,0,0.5);
+    box-shadow: 0 0 4px rgba(255,215,0,0.2);
+  }
+  .mini-tile.hidden {
+    background: rgba(13,71,161,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .mini-punct {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Stats */
+  .stats-row {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1.5rem;
+    gap: 0.4rem;
+    margin-bottom: 1.2rem;
   }
-  .stat {
+  .stat-box {
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.5rem 0.8rem;
+    padding: 0.4rem 0.7rem;
     background: rgba(255,255,255,0.04);
     border-radius: 8px;
     border: 1px solid rgba(255,255,255,0.06);
   }
   .stat-icon {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     flex-shrink: 0;
   }
   .stat-value {
     font-family: 'Oswald', sans-serif;
-    font-size: 1.05rem;
+    font-size: 1rem;
     color: rgba(255,255,255,0.85);
   }
   .stat-value.score {
     color: #ffd700;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 700;
   }
   .stat-value.streak {
@@ -203,5 +313,16 @@
     font-size: 0.8rem;
     color: rgba(255,255,255,0.35);
     margin: 0;
+  }
+
+  @media (max-width: 380px) {
+    .mini-tile {
+      width: 16px;
+      height: 20px;
+      font-size: 0.55rem;
+    }
+    .preview-space { width: 6px; }
+    .phrase-preview { gap: 2px; }
+    .preview-word { gap: 1px; }
   }
 </style>

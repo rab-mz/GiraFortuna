@@ -4,7 +4,7 @@
   import { daily } from './lib/stores/dailyStore.svelte.js';
   import { sound } from './lib/audio/soundEngine.js';
   import { SEEDS } from './lib/logic/wheelSeeds.js';
-  import { getLettersInPhrase } from './lib/logic/gameEngine.js';
+  import { isLetter, normalizeChar } from './lib/utils/italian.js';
   import StartScreen from './components/StartScreen.svelte';
   import Wheel from './components/Wheel.svelte';
   import PuzzleBoard from './components/PuzzleBoard.svelte';
@@ -24,6 +24,7 @@
   import MobileGameLayout from './components/MobileGameLayout.svelte';
   import DiceRollScreen from './components/DiceRollScreen.svelte';
   import { analytics } from './lib/stores/analyticsStore.js';
+  import { generalStats } from './lib/stores/generalStatsStore.svelte.js';
 
   // Init analytics on mount
   $effect(() => { analytics.init(); });
@@ -38,19 +39,78 @@
   let currentSegments = $derived(SEEDS[game.currentSeed]?.segments ?? SEEDS.classico.segments);
   let isDailyMode = $state(false);
   let dailyRecorded = $state(false);
+  let gameMode = $state('single'); // 'single' | 'multi' | 'online' | 'daily'
+  let generalStatsRecorded = $state(false);
+  // Snapshot of revealed state captured BEFORE solve (since solve reveals all letters)
+  let dailyPreSolveSnapshot = $state(null);
 
   // Record daily result when daily game ends
   $effect(() => {
-    if (isDailyMode && game.phase === 'game_over' && !dailyRecorded) {
+    if (isDailyMode && game.phase === 'game_over' && !dailyRecorded && dailyPreSolveSnapshot) {
       dailyRecorded = true;
-      const totalLetters = getLettersInPhrase(game.phraseObj.text).size;
+      const snap = dailyPreSolveSnapshot;
       daily.recordResult({
         score: game.roundWinner?.money ?? 0,
-        usedLettersCount: game.revealedLetters.size,
-        totalLetters,
+        revealedCount: snap.revealedCount,
+        totalCount: snap.totalCount,
+        phraseText: snap.phraseText,
+        revealedLetters: snap.revealedLetters,
+        jollyPositions: snap.jollyPositions,
       });
     }
   });
+
+  // Record general stats when any game ends
+  $effect(() => {
+    if (game.phase === 'game_over' && !generalStatsRecorded) {
+      generalStatsRecorded = true;
+      const winner = game.roundWinner;
+      let won = true;
+      if (gameMode === 'online') {
+        won = winner?.name === online.myName;
+      } else if (gameMode === 'multi') {
+        won = winner?.name === game.players[0]?.name;
+      }
+      generalStats.recordGame({
+        mode: gameMode,
+        phrase: game.phraseObj?.text ?? '',
+        category: game.phraseObj?.category ?? '',
+        score: winner?.money ?? 0,
+        seed: game.currentSeed,
+        rounds: game.totalRounds,
+        won,
+        players: game.players.length,
+      });
+    }
+  });
+
+  // Capture revealed state snapshot (called before any action that could end the game)
+  function captureDailySnapshot() {
+    if (!isDailyMode || dailyRecorded) return;
+    const phrase = game.phraseObj.text;
+    const revealed = game.revealedLetters;
+    const jolly = game.jollyRevealedPositions;
+    let totalCount = 0;
+    let revealedCount = 0;
+    let pos = 0;
+    for (const ch of phrase) {
+      if (isLetter(ch)) {
+        totalCount++;
+        const norm = normalizeChar(ch);
+        if (revealed.has(norm) || jolly.has(pos)) {
+          revealedCount++;
+        }
+      }
+      pos++;
+    }
+    dailyPreSolveSnapshot = {
+      revealedCount,
+      totalCount,
+      phraseText: phrase,
+      revealedLetters: [...revealed],
+      jollyPositions: [...jolly],
+    };
+  }
 
   function getWeightedSpinIndex() {
     const segs = currentSegments;
@@ -122,8 +182,12 @@
     if (gs._dailyDate) {
       isDailyMode = true;
       dailyRecorded = false;
+      gameMode = 'daily';
     }
+    generalStatsRecorded = false;
     game.restoreFromSession(gs);
+    // If restored into game_over, it was already recorded before
+    if (game.phase === 'game_over') generalStatsRecorded = true;
     const onlineSess = loadOnlineSession();
     if (onlineSess && onlineSess.mode === 'client') {
       online.joinRoom(onlineSess.roomCode, onlineSess.playerName);
@@ -142,6 +206,9 @@
     const phrase = daily.getDailyPhrase();
     isDailyMode = true;
     dailyRecorded = false;
+    dailyPreSolveSnapshot = null;
+    gameMode = 'daily';
+    generalStatsRecorded = false;
     game.startGame(['Giocatore'], 1, 'classico', null, phrase);
     analytics.trackGameStart({ mode: 'daily', playerCount: 1, seed: 'classico', rounds: 1 });
   }
@@ -219,6 +286,7 @@
       online.sendAction('pickConsonant', { letter });
       return;
     }
+    captureDailySnapshot();
     const before = game.revealedLetters.size;
     game.pickConsonant(letter);
     const found = game.revealedLetters.size > before;
@@ -231,6 +299,7 @@
       online.sendAction('buyVowel', { letter });
       return;
     }
+    captureDailySnapshot();
     const before = game.revealedLetters.size;
     game.buyVowel(letter);
     const found = game.revealedLetters.size > before;
@@ -261,7 +330,7 @@
       online.sendAction('attemptSolve', { guess });
       return;
     }
-    const phaseBefore = game.phase;
+    captureDailySnapshot();
     game.attemptSolve(guess);
     const success = game.phase === 'round_won' || game.phase === 'game_over';
     analytics.trackPuzzleSolve({ success, phrase_length: game.phraseObj?.text?.length });
@@ -291,6 +360,7 @@
       online.sendAction('useJolly', { index: absoluteIndex });
       return;
     }
+    captureDailySnapshot();
     game.useJolly(absoluteIndex);
     if (isHost) hostBroadcast();
   }
@@ -334,6 +404,8 @@
     clearSession();
     isDailyMode = false;
     dailyRecorded = false;
+    dailyPreSolveSnapshot = null;
+    generalStatsRecorded = false;
     if (isOnline) {
       online.leaveRoom();
     }
@@ -341,6 +413,8 @@
 
   // --- Online start (host starts the game) ---
   function handleOnlineStart(playerNames, rounds, seed) {
+    gameMode = 'online';
+    generalStatsRecorded = false;
     const dice = generateDiceForPlayers(playerNames);
     const winner = getDiceWinner(dice);
     game.startGame(playerNames, rounds, seed, winner);
@@ -478,6 +552,8 @@
     onStart={(names, rounds, seed) => {
       isDailyMode = false;
       const mode = names.length > 1 ? 'local' : 'single';
+      gameMode = names.length > 1 ? 'multi' : 'single';
+      generalStatsRecorded = false;
       if (names.length > 1) {
         const dice = generateDiceForPlayers(names);
         const winner = getDiceWinner(dice);

@@ -1,5 +1,5 @@
 import { phrases } from '../data/phrases.js';
-import { getLettersInPhrase } from '../logic/gameEngine.js';
+import { isLetter, normalizeChar } from '../utils/italian.js';
 
 const DAILY_KEY = 'gf_daily';
 const STATS_KEY = 'gf_stats';
@@ -87,7 +87,7 @@ function createDailyStore() {
     return getDailyPhraseForDate(getTodayStr());
   }
 
-  function recordResult({ score, usedLettersCount, totalLetters }) {
+  function recordResult({ score, revealedCount, totalCount, phraseText, revealedLetters, jollyPositions }) {
     const today = getTodayStr();
     const phrase = getDailyPhrase();
 
@@ -95,8 +95,11 @@ function createDailyStore() {
       date: today,
       dailyNumber: getDailyNumber(),
       score,
-      usedLettersCount,
-      totalLetters,
+      revealedCount,
+      totalCount,
+      phraseText,
+      revealedLetters,
+      jollyPositions,
       category: phrase.category,
     };
     dailyResult = result;
@@ -122,16 +125,36 @@ function createDailyStore() {
     saveJSON(STATS_KEY, { ...stats });
   }
 
+  function buildEmojiGrid(phraseText, revealedLettersArr, jollyPositionsArr) {
+    const revealed = new Set(revealedLettersArr || []);
+    const jolly = new Set(jollyPositionsArr || []);
+    let grid = '';
+    let pos = 0;
+    for (const ch of phraseText) {
+      if (ch === ' ') {
+        grid += ' ';
+      } else if (isLetter(ch)) {
+        const norm = normalizeChar(ch);
+        grid += (revealed.has(norm) || jolly.has(pos)) ? '🟨' : '⬛';
+      }
+      pos++;
+    }
+    return grid;
+  }
+
   function getShareText() {
     if (!dailyResult) return '';
     const r = dailyResult;
+    const grid = buildEmojiGrid(r.phraseText, r.revealedLetters, r.jollyPositions);
     return [
       `🎡 Gira la Fortuna #${r.dailyNumber}`,
       `📂 ${r.category}`,
       `💰 ${r.score.toLocaleString('it-IT')}€`,
-      `🔤 ${r.usedLettersCount}/${r.totalLetters} lettere`,
-      `🔥 ${stats.currentStreak} ${stats.currentStreak === 1 ? 'giorno' : 'giorni'}`,
+      `🔤 ${r.revealedCount}/${r.totalCount}`,
       ``,
+      grid,
+      ``,
+      `🔥 ${stats.currentStreak} ${stats.currentStreak === 1 ? 'giorno' : 'giorni'}`,
       `giralafortuna.it`,
     ].join('\n');
   }

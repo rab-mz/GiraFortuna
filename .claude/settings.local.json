@@ -4,7 +4,14 @@
       "Bash(npm run build 2>&1)",
       "Bash(npm install @supabase/supabase-js)",
       "Bash(npx vite build 2>&1)",
-      "Bash(find /Users/baharababa/Progetti/ruota-della-fortuna/src -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" -o -name \"*.css\" \\\\\\) 2>/dev/null | sort)"
+      "Bash(find /Users/baharababa/Progetti/ruota-della-fortuna/src -type f \\\\\\( -name \"*.svelte\" -o -name \"*.js\" -o -name \"*.css\" \\\\\\) 2>/dev/null | sort)",
+      "mcp__supabase__list_tables",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__apply_migration",
+      "mcp__supabase__execute_sql",
+      "Bash(xargs basename:*)",
+      "Bash(grep -E \"\\\\.svelte$\")",
+      "Bash(find /Users/baharababa/Progetti/ruota-della-fortuna/src -type f \\\\\\(-name *.svg -o -name *.png -o -name *.jpg \\\\\\))"
     ]
   }
 }
