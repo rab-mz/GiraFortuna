@@ -222,8 +222,8 @@
     ctx.font = `bold ${hubFontSize}px Oswald, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('GIRA', c, c - 4 * dpr);
-    ctx.fillText('FORTUNA', c, c + 10 * dpr);
+    ctx.fillText('GIRA LA', c, c - 4 * dpr);
+    ctx.fillText('FORTUNA', c, c + 8 * dpr);
   }
 
   function lightenColor(hex, percent) {
@@ -338,6 +338,7 @@
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
+    overflow: hidden;
   }
   .pointer-wrap {
     z-index: 3;
