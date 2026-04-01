@@ -113,22 +113,7 @@
   }
 
   function getWeightedSpinIndex() {
-    const segs = currentSegments;
-    if (game.currentSeed !== 'maledizione' || game.bankruptCount === 0) {
-      return Math.floor(Math.random() * segs.length);
-    }
-    const weights = segs.map(seg => {
-      if (seg.value === 'bancarotta') return Math.pow(2, game.bankruptCount);
-      if (seg.value === 'passa') return Math.pow(2, Math.ceil(game.bankruptCount / 2));
-      return 1;
-    });
-    const total = weights.reduce((a, b) => a + b, 0);
-    let r = Math.random() * total;
-    for (let i = 0; i < weights.length; i++) {
-      r -= weights[i];
-      if (r <= 0) return i;
-    }
-    return weights.length - 1;
+    return Math.floor(Math.random() * currentSegments.length);
   }
 
   // Sync audio mute state from settings
@@ -383,7 +368,7 @@
   }
 
   function handleBackButton() {
-    if (game.isMultiplayer && game.phase !== 'round_won' && game.phase !== 'game_over') {
+    if ((game.isMultiplayer || isDailyMode) && game.phase !== 'round_won' && game.phase !== 'game_over') {
       showExitConfirm = true;
     } else {
       handleGoToMenu();

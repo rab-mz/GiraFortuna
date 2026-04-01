@@ -22,6 +22,8 @@
   let playerNames = $state(['', '']);
   let numRounds = $state(1);
   let selectedSeed = $state('classico');
+  let showOptions = $state(false);
+  let expandedSection = $state(null); // null | 'multi' | 'online'
 
   // Online state
   let onlineMode = $state(null); // null | 'create' | 'join'
@@ -87,131 +89,151 @@
   </button>
 
   <div class="content">
-    <h1 class="title">Gira la<br><span>Fortuna</span></h1>
-    <p class="subtitle">Gira la ruota, indovina la frase!</p>
+    {#if !expandedSection}
+      <!-- ========== HOME VIEW ========== -->
+      <h1 class="title">Gira la<br><span>Fortuna</span></h1>
+      <p class="subtitle">Gira la ruota, indovina la frase!</p>
 
-    <button
-      class="daily-btn"
-      onclick={() => {
-        if (daily.hasPlayedToday) {
-          showDailyResult = true;
-        } else {
-          onDailyStart();
-        }
-      }}
-    >
-      <span class="daily-icon">☀️</span>
-      <span class="daily-text">
-        {#if daily.hasPlayedToday}
-          VEDI RISULTATO
-        {:else}
-          FRASE DEL GIORNO
+      <button class="play-btn play-btn-hero" onclick={() => { mode = 'single'; handleStart(); }}>
+        GIOCA
+      </button>
+
+      <button
+        class="daily-btn"
+        onclick={() => {
+          if (daily.hasPlayedToday) {
+            showDailyResult = true;
+          } else {
+            onDailyStart();
+          }
+        }}
+      >
+        <span class="daily-icon">☀️</span>
+        <span class="daily-text">
+          {#if daily.hasPlayedToday}
+            VEDI RISULTATO
+          {:else}
+            FRASE DEL GIORNO
+          {/if}
+        </span>
+        {#if daily.streak > 0}
+          <span class="streak-badge">🔥 {daily.streak}</span>
         {/if}
-      </span>
-      {#if daily.streak > 0}
-        <span class="streak-badge">🔥 {daily.streak}</span>
-      {/if}
-    </button>
+      </button>
 
-    <div class="mode-selector">
-      <button
-        class="mode-btn" class:active={mode === 'single'}
-        onclick={() => { mode = 'single'; }}
-      >
-        1 Giocatore
+      <button class="options-toggle" onclick={() => { showOptions = !showOptions; }}>
+        Opzioni {showOptions ? '▲' : '▼'}
       </button>
-      <button
-        class="mode-btn" class:active={mode === 'multi'}
-        onclick={() => { mode = 'multi'; }}
-      >
-        Locale
-      </button>
-      <button
-        class="mode-btn" class:active={mode === 'online'}
-        onclick={() => { mode = 'online'; }}
-      >
-        Online
-      </button>
-    </div>
 
-    {#if mode !== 'online'}
-      <div class="seed-select">
-        <span>Variante:</span>
-        <div class="seed-btns">
-          {#each SEED_LIST as seed}
-            <button
-              class="seed-btn" class:active={selectedSeed === seed.id}
-              title={seed.description}
-              onclick={() => { selectedSeed = seed.id; }}
-            >{seed.name}</button>
-          {/each}
+      {#if showOptions}
+        <div class="options-panel" style="animation: fadeIn 0.3s ease">
+          <div class="seed-select">
+            <span>Variante:</span>
+            <div class="seed-btns">
+              {#each SEED_LIST as seed}
+                <button
+                  class="seed-btn" class:active={selectedSeed === seed.id}
+                  title={seed.description}
+                  onclick={() => { selectedSeed = seed.id; }}
+                >{seed.name}</button>
+              {/each}
+            </div>
+            <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
+          </div>
+
+          <div class="round-select">
+            <span>Numero round:</span>
+            <div class="num-btns">
+              {#each [1, 2, 3, 4, 5] as n}
+                <button
+                  class="num-btn" class:active={numRounds === n}
+                  onclick={() => { numRounds = n; }}
+                >{n}</button>
+              {/each}
+            </div>
+          </div>
         </div>
-        <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
-      </div>
-    {/if}
+      {/if}
 
-    {#if mode === 'multi'}
-      <div class="multi-setup">
-        <div class="num-select">
-          <span>Numero giocatori:</span>
-          <div class="num-btns">
-            {#each [2, 3, 4] as n}
-              <button
-                class="num-btn" class:active={numPlayers === n}
-                onclick={() => updateNumPlayers(n)}
-              >{n}</button>
+      <div class="secondary-actions">
+        <button class="secondary-btn" onclick={() => { expandedSection = 'multi'; mode = 'multi'; }}>
+          Multiplayer Locale
+        </button>
+        <button class="secondary-btn" onclick={() => { expandedSection = 'online'; mode = 'online'; }}>
+          Online
+        </button>
+      </div>
+
+    {:else if expandedSection === 'multi'}
+      <!-- ========== MULTIPLAYER LOCALE ========== -->
+      <div class="section-view" style="animation: fadeIn 0.3s ease">
+        <h2 class="section-title">Multiplayer Locale</h2>
+
+        <div class="multi-setup">
+          <div class="num-select">
+            <span>Giocatori:</span>
+            <div class="num-btns">
+              {#each [2, 3, 4] as n}
+                <button
+                  class="num-btn" class:active={numPlayers === n}
+                  onclick={() => updateNumPlayers(n)}
+                >{n}</button>
+              {/each}
+            </div>
+          </div>
+
+          <div class="name-inputs">
+            {#each playerNames as _, i}
+              <input
+                type="text"
+                placeholder={`Giocatore ${i + 1}`}
+                bind:value={playerNames[i]}
+              />
             {/each}
           </div>
         </div>
 
-        <div class="name-inputs">
-          {#each playerNames as _, i}
-            <input
-              type="text"
-              placeholder={`Giocatore ${i + 1}`}
-              bind:value={playerNames[i]}
-            />
-          {/each}
+        <div class="section-options">
+          <div class="seed-select">
+            <span>Variante:</span>
+            <div class="seed-btns">
+              {#each SEED_LIST as seed}
+                <button
+                  class="seed-btn" class:active={selectedSeed === seed.id}
+                  title={seed.description}
+                  onclick={() => { selectedSeed = seed.id; }}
+                >{seed.name}</button>
+              {/each}
+            </div>
+            <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
+          </div>
+
+          <div class="round-select">
+            <span>Round:</span>
+            <div class="num-btns">
+              {#each [1, 2, 3, 4, 5] as n}
+                <button
+                  class="num-btn" class:active={numRounds === n}
+                  onclick={() => { numRounds = n; }}
+                >{n}</button>
+              {/each}
+            </div>
+          </div>
         </div>
+
+        <button class="play-btn" onclick={handleStart}>
+          GIOCA!
+        </button>
+        <button class="back-btn" onclick={() => { expandedSection = null; mode = 'single'; }}>
+          Indietro
+        </button>
       </div>
 
-      <div class="round-select">
-        <span>Numero round:</span>
-        <div class="num-btns">
-          {#each [1, 2, 3, 4, 5] as n}
-            <button
-              class="num-btn" class:active={numRounds === n}
-              onclick={() => { numRounds = n; }}
-            >{n}</button>
-          {/each}
-        </div>
-      </div>
+    {:else if expandedSection === 'online'}
+      <!-- ========== ONLINE ========== -->
+      <div class="section-view" style="animation: fadeIn 0.3s ease">
+        <h2 class="section-title">Online</h2>
 
-      <button class="play-btn" onclick={handleStart}>
-        GIOCA!
-      </button>
-    {/if}
-
-    {#if mode === 'single'}
-      <div class="round-select">
-        <span>Numero round:</span>
-        <div class="num-btns">
-          {#each [1, 2, 3, 4, 5] as n}
-            <button
-              class="num-btn" class:active={numRounds === n}
-              onclick={() => { numRounds = n; }}
-            >{n}</button>
-          {/each}
-        </div>
-      </div>
-
-      <button class="play-btn" onclick={handleStart}>
-        GIOCA!
-      </button>
-    {/if}
-
-    {#if mode === 'online'}
-      <div class="online-setup">
         {#if online.error}
           <div class="online-error">{online.error}</div>
         {/if}
@@ -233,6 +255,9 @@
               Entra in Stanza
             </button>
           </div>
+          <button class="back-btn" onclick={() => { expandedSection = null; mode = 'single'; }}>
+            Indietro
+          </button>
         {/if}
 
         {#if onlineMode === 'join' && online.mode === 'offline'}
@@ -291,30 +316,32 @@
               </ul>
             </div>
 
-            <div class="round-select">
-              <span>Numero round:</span>
-              <div class="num-btns">
-                {#each [1, 2, 3, 4, 5] as n}
-                  <button
-                    class="num-btn" class:active={onlineRounds === n}
-                    onclick={() => { onlineRounds = n; }}
-                  >{n}</button>
-                {/each}
+            <div class="section-options">
+              <div class="round-select">
+                <span>Round:</span>
+                <div class="num-btns">
+                  {#each [1, 2, 3, 4, 5] as n}
+                    <button
+                      class="num-btn" class:active={onlineRounds === n}
+                      onclick={() => { onlineRounds = n; }}
+                    >{n}</button>
+                  {/each}
+                </div>
               </div>
-            </div>
 
-            <div class="seed-select">
-              <span>Variante:</span>
-              <div class="seed-btns">
-                {#each SEED_LIST as seed}
-                  <button
-                    class="seed-btn" class:active={selectedSeed === seed.id}
-                    title={seed.description}
-                    onclick={() => { selectedSeed = seed.id; }}
-                  >{seed.name}</button>
-                {/each}
+              <div class="seed-select">
+                <span>Variante:</span>
+                <div class="seed-btns">
+                  {#each SEED_LIST as seed}
+                    <button
+                      class="seed-btn" class:active={selectedSeed === seed.id}
+                      title={seed.description}
+                      onclick={() => { selectedSeed = seed.id; }}
+                    >{seed.name}</button>
+                  {/each}
+                </div>
+                <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
               </div>
-              <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
             </div>
 
             <button
@@ -519,30 +546,6 @@
     margin-bottom: 2.5rem;
     letter-spacing: 1px;
   }
-  .mode-selector {
-    display: flex;
-    gap: 0;
-    border-radius: 10px;
-    overflow: hidden;
-    border: 2px solid rgba(255,215,0,0.3);
-    margin-bottom: 1.5rem;
-  }
-  .mode-btn {
-    flex: 1;
-    padding: 0.8rem 1rem;
-    background: rgba(255,255,255,0.05);
-    border: none;
-    color: rgba(255,255,255,0.6);
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.25s;
-  }
-  .mode-btn.active {
-    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1));
-    color: #ffd700;
-  }
   .multi-setup {
     margin-bottom: 1.5rem;
     animation: fadeIn 0.3s ease;
@@ -606,8 +609,8 @@
   }
   .seed-desc {
     font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.4);
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.65);
     margin: 0;
     text-align: center;
     min-height: 1.1em;
@@ -981,10 +984,88 @@
     position: relative;
   }
 
+  /* Hero play button */
+  .play-btn-hero {
+    width: 100%;
+    padding: 1.2rem;
+    font-size: 1.8rem;
+    letter-spacing: 6px;
+    margin-bottom: 1rem;
+  }
+
+  /* Options toggle */
+  .options-toggle {
+    display: block;
+    width: 100%;
+    background: none;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    color: rgba(255,255,255,0.5);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+  }
+  .options-toggle:hover {
+    color: rgba(255,255,255,0.7);
+    border-color: rgba(255,215,0,0.3);
+  }
+  .options-panel {
+    margin-bottom: 1rem;
+  }
+
+  /* Secondary action buttons */
+  .secondary-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .secondary-btn {
+    flex: 1;
+    padding: 0.75rem 0.8rem;
+    background: rgba(255,255,255,0.06);
+    border: 1.5px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: rgba(255,255,255,0.6);
+    font-family: 'Oswald', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .secondary-btn:hover {
+    background: rgba(255,215,0,0.1);
+    border-color: rgba(255,215,0,0.3);
+    color: #ffd700;
+  }
+  /* Section views (multi / online) */
+  .section-view {
+    text-align: center;
+  }
+  .section-title {
+    font-family: 'Oswald', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ffd700;
+    letter-spacing: 2px;
+    margin: 0 0 1.5rem;
+    text-transform: uppercase;
+  }
+  .section-options {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
   @media (max-width: 480px) {
     .title { font-size: 2.2rem; }
     .title span { font-size: 1.6rem; }
     .play-btn { padding: 0.8rem 2.5rem; font-size: 1.2rem; }
+    .play-btn-hero { padding: 1rem; font-size: 1.5rem; }
     .room-code { font-size: 2rem; }
     .online-actions { flex-direction: column; }
   }

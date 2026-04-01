@@ -64,14 +64,20 @@ function createDailyStore() {
     savedDaily?.date === today ? savedDaily : null
   );
 
-  let stats = $state(savedStats || {
+  const defaultStats = {
     gamesPlayed: 0,
     gamesWon: 0,
     currentStreak: 0,
     maxStreak: 0,
     bestScore: 0,
     lastPlayedDate: null,
-  });
+  };
+  const loaded = savedStats || defaultStats;
+  // Reset streak if there's a gap (didn't play yesterday or today)
+  if (loaded.lastPlayedDate && loaded.lastPlayedDate !== today && loaded.lastPlayedDate !== getYesterdayStr()) {
+    loaded.currentStreak = 0;
+  }
+  let stats = $state(loaded);
 
   let hasPlayedToday = $derived(dailyResult !== null);
   let dailyNumber = $derived(getDailyNumber());
@@ -110,19 +116,19 @@ function createDailyStore() {
     stats.gamesWon++;
     if (score > stats.bestScore) stats.bestScore = score;
 
-    // Streak: if played yesterday, increment; otherwise reset to 1
-    const yesterdayStr = getYesterdayStr();
-    if (stats.lastPlayedDate === yesterdayStr) {
-      stats.currentStreak++;
-    } else if (stats.lastPlayedDate !== today) {
-      stats.currentStreak = 1;
-    }
+    stats.currentStreak++;
     stats.lastPlayedDate = today;
-
     if (stats.currentStreak > stats.maxStreak) {
       stats.maxStreak = stats.currentStreak;
     }
-    saveJSON(STATS_KEY, { ...stats });
+    saveJSON(STATS_KEY, {
+      gamesPlayed: stats.gamesPlayed,
+      gamesWon: stats.gamesWon,
+      currentStreak: stats.currentStreak,
+      maxStreak: stats.maxStreak,
+      bestScore: stats.bestScore,
+      lastPlayedDate: stats.lastPlayedDate,
+    });
   }
 
   function buildEmojiGrid(phraseText, revealedLettersArr, jollyPositionsArr) {

@@ -49,12 +49,6 @@ export const SEEDS = {
       { label: 'Jolly', value: 'jolly', color: '#00897B', textColor: '#fff' },
     ],
   },
-  maledizione: {
-    id: 'maledizione',
-    name: 'Maledizione',
-    description: 'Ogni Bancarotta raddoppia le probabilita di Bancarotta e Passa per tutti!',
-    segments: classicSegments,
-  },
 };
 
 export const SEED_LIST = Object.values(SEEDS);
