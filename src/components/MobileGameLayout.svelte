@@ -58,6 +58,17 @@
     game.phase === 'picking_vowel' ? 'vowel' : 'consonant'
   );
 
+  // Ruota grande come in Home: piena larghezza, tagliata sotto dalla barra dei
+  // comandi. La finestra visibile si stringe quando servono le lettere, cosi'
+  // la ruota "scende" invece di rimpicciolirsi.
+  let wheelSize = $state(360);
+  $effect(() => {
+    const update = () => { wheelSize = Math.min(Math.round(window.innerWidth * 1.45), 560); };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  });
+
   // Waiting message when it's the opponent's turn (online only)
   let opponentName = $derived(game.currentPlayer?.name ?? '');
   let waitingMessage = $derived(() => {
@@ -73,6 +84,7 @@
     }
   });
   let showWaiting = $derived(isOnline && !isMyTurn && waitingMessage() !== null);
+
 
   // Timer visibile (anello sull'avatar attivo) solo nelle fasi in cui conta
   let timerRunning = $derived(
@@ -155,6 +167,24 @@
     onJollyPick={onUseJolly}
   />
 
+  <!-- Step hint sopra la ruota. Lo spazio resta occupato anche quando il
+       messaggio non c'e', altrimenti al via del giro la ruota fa un salto. -->
+  <div class="hint-slot">
+    {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
+      <p class="step-hint" in:fade={{ duration: 200 }}>
+        {#if !game.consonantsLeft && !game.vowelsLeft}
+          Tutte le lettere sono note: risolvi la frase
+        {:else if !game.consonantsLeft}
+          Niente più consonanti: compra una vocale o risolvi
+        {:else if !game.hasSpunThisTurn}
+          Gira la ruota per iniziare il turno
+        {:else}
+          Puoi girare di nuovo, comprare una vocale o risolvere
+        {/if}
+      </p>
+    {/if}
+  </div>
+
   <!-- Phase-conditional content area -->
   <div class="phase-area">
     {#if showJolly}
@@ -174,6 +204,7 @@
         <LetterPicker
           mode={pickerMode}
           usedLetters={game.usedLetters}
+          showHint={pickerMode === 'vowel'}
           onPick={pickerMode === 'vowel' ? onBuyVowel : onPickConsonant}
         />
       </div>
@@ -186,32 +217,24 @@
     {/if}
 
     <!-- Wheel: always visible to prevent canvas freeze from mount/unmount -->
-    <div class="wheel-area">
-      <Wheel
-        segments={currentSegments}
-        spinning={game.phase === 'spinning'}
-        canSpin={game.canSpin && (!isOnline || isMyTurn)}
-        forcedResult={forcedSpinIndex}
-        onSpin={onStartSpin}
-        onResult={onSpinResult}
-      />
+    <div class="wheel-stage">
+      <div class="wheel-holder">
+        <Wheel
+          segments={currentSegments}
+          spinning={game.phase === 'spinning'}
+          canSpin={game.canSpin && (!isOnline || isMyTurn)}
+          forcedResult={forcedSpinIndex}
+          size={wheelSize}
+          onSpin={onStartSpin}
+          onResult={onSpinResult}
+        />
+      </div>
     </div>
   </div>
 
-  <!-- Step hint (between wheel and action bar) -->
-  {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
-    <p class="step-hint" in:fade={{ duration: 200 }}>
-      {#if !game.consonantsLeft && !game.vowelsLeft}
-        Tutte le lettere sono note: risolvi la frase
-      {:else if !game.consonantsLeft}
-        Niente più consonanti: compra una vocale o risolvi
-      {:else if !game.hasSpunThisTurn}
-        Gira la ruota per iniziare il turno
-      {:else}
-        Puoi girare di nuovo, comprare una vocale o risolvere
-      {/if}
-    </p>
-  {/if}
+
+  <!-- La sfumatura resta sempre in fondo: e' lei a far "uscire" la ruota dallo schermo -->
+  <div class="bottom-fade" aria-hidden="true"></div>
 
   <!-- Sticky bottom action bar -->
   {#if showActionBar}
@@ -287,8 +310,11 @@
 
 <style>
   .mobile-app {
-    min-height: 100vh;
-    min-height: 100dvh;
+    /* altezza fissa: la ruota deborda dal fondo di proposito, e senza questo
+       il contenuto in eccesso farebbe scrollare la pagina */
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -448,16 +474,34 @@
   /* --- Phase Area --- */
   .phase-area {
     flex: 1;
+    min-height: 0; /* senza questo il flex item cresce con la ruota e la pagina scrolla */
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 0.3rem 0.5rem;
     position: relative;
   }
-  .wheel-area {
+  /* La ruota riempie lo spazio che resta e viene tagliata dal bordo della barra
+     comandi: quando compaiono le lettere lo spazio si riduce e la ruota "scende"
+     da sola, senza misure fisse che cambiano da telefono a telefono. */
+  /* La ruota non viene ritagliata: esce dal fondo dello schermo, come in Home.
+     Quando compare qualcosa in mezzo (le lettere, il Jolly) lo spazio si
+     riduce e la ruota scivola giu' da sola. */
+  /* La ruota parte poco sotto il tabellone ed e' piu' grande dello spazio che
+     resta: quel che avanza esce dal fondo dello schermo. Quando in mezzo
+     compaiono le lettere lo spazio si riduce e la ruota scende da sola. */
+  .wheel-stage {
+    width: 100%;
+    flex: 1;
+    min-height: 90px;
+    padding-top: 40px;
     display: flex;
     justify-content: center;
-    width: 100%;
+    align-items: flex-start;
+    overflow: hidden;
+  }
+  .wheel-holder {
+    flex-shrink: 0;
   }
 
   /* --- Picker Area --- */
@@ -520,6 +564,13 @@
   }
 
   /* --- Step Hint --- */
+  .hint-slot {
+    min-height: 2.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
   .step-hint {
     font-family: var(--font-display);
     font-size: 0.98rem;
@@ -532,15 +583,30 @@
   }
 
   /* --- Sticky Bottom Action Bar --- */
+  .bottom-fade {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(190px + env(safe-area-inset-bottom, 0px));
+    z-index: 39;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      rgba(10, 14, 35, 0.98) 45%,
+      rgba(10, 14, 35, 0.85) 72%,
+      rgba(10, 14, 35, 0)
+    );
+  }
   .action-bar {
-    position: sticky;
+    position: fixed;
+    left: 0;
+    right: 0;
     bottom: 0;
     z-index: 40;
-    padding: 0.6rem 0.6rem;
+    padding: 1.6rem 0.6rem 0.6rem;
     padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
-    background: rgba(10, 14, 35, 0.95);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid var(--glass-border);
+    background: none;
   }
 
   /* --- Waiting for opponent --- */

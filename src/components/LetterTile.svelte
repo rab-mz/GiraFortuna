@@ -58,13 +58,14 @@
     transform: scale(1.1);
   }
   .tile {
-    width: 40px;
-    height: 50px;
+    /* le misure arrivano dal tabellone: si stringono se una riga e' troppo lunga */
+    width: var(--tile-w, 40px);
+    height: var(--tile-h, 50px);
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-display);
-    font-size: 1.3rem;
+    font-size: var(--tile-font, 1.3rem);
     font-weight: 700;
     border-radius: 7px;
     transition: all 0.3s ease;
@@ -94,7 +95,7 @@
   }
   .spacer {
     width: 18px;
-    height: 50px;
+    height: var(--tile-h, 50px);
   }
   .jolly-badge {
     position: absolute;
@@ -120,14 +121,14 @@
 
   @media (max-width: 480px) {
     .tile {
-      width: 28px;
-      height: 36px;
-      font-size: 0.95rem;
+      width: var(--tile-w, 28px);
+      height: var(--tile-h, 36px);
+      font-size: var(--tile-font, 0.95rem);
       border-radius: 5px;
     }
     .spacer {
       width: 12px;
-      height: 36px;
+      height: var(--tile-h, 36px);
     }
     .jolly-badge {
       font-size: 0.5rem;

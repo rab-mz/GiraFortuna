@@ -9,6 +9,7 @@ import {
   getRemainingVowels,
 } from '../logic/gameEngine.js';
 import { normalizeChar, isVowel, isLetter } from '../utils/italian.js';
+import { formatEuro } from '../utils/format.js';
 import { sound } from '../audio/soundEngine.js';
 import { settings } from './settingsStore.svelte.js';
 
@@ -66,7 +67,7 @@ function createGame() {
     turnDeadline = Date.now() + settings.timerSeconds * 1000;
     timerInterval = setInterval(() => {
       tickFromDeadline(() => {
-        showMessage(`Tempo scaduto! ${currentPlayer.name} perde il turno.`);
+        showMessage(`Tempo scaduto: ${currentPlayer.name} perde il turno`);
         nextTurn();
         if (_onTimerExpired) _onTimerExpired();
       });
@@ -123,7 +124,7 @@ function createGame() {
 
   function applyMinPrize() {
     players[currentPlayerIndex].money += 1000;
-    showMessage(`Bonus vittoria! +1000€`, 3000);
+    showMessage(`Bonus vittoria! +${formatEuro(1000)}`, 3000);
   }
 
   function handleWin() {
@@ -277,7 +278,7 @@ function createGame() {
       revealedLetters = new Set([...revealedLetters, norm]);
       const earned = currentSpinValue * count;
       players[currentPlayerIndex].money += earned;
-      showMessage(`${norm} presente ${count} volta/e! +${earned}€`);
+      showMessage(`${norm} presente ${count} ${count === 1 ? 'volta' : 'volte'}: +${formatEuro(earned)}`);
       if (isPhraseComplete(phraseObj.text, revealedLetters, jollyRevealedPositions)) {
         handleWin();
         return;
@@ -286,7 +287,7 @@ function createGame() {
       startTimer();
     } else {
       sound.wrongAnswer();
-      showMessage(`${norm} non presente!`);
+      showMessage(`${norm} non c'è`);
       nextTurn();
     }
   }
@@ -310,7 +311,7 @@ function createGame() {
     if (count > 0) {
       sound.letterReveal();
       revealedLetters = new Set([...revealedLetters, norm]);
-      showMessage(`${norm} presente ${count} volta/e!`);
+      showMessage(`${norm} presente ${count} ${count === 1 ? 'volta' : 'volte'}`);
       if (isPhraseComplete(phraseObj.text, revealedLetters, jollyRevealedPositions)) {
         handleWin();
         return;
@@ -319,7 +320,7 @@ function createGame() {
       startTimer();
     } else {
       sound.wrongAnswer();
-      showMessage(`${norm} non presente!`);
+      showMessage(`${norm} non c'è`);
       nextTurn();
     }
   }

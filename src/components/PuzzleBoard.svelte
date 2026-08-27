@@ -1,6 +1,7 @@
 <script>
   import LetterTile from './LetterTile.svelte';
   import { normalizeChar, isLetter } from '../lib/utils/italian.js';
+  import { layoutPhrase, rowWidth } from '../lib/utils/boardLayout.js';
 
   let {
     phrase = '',
@@ -11,6 +12,41 @@
   } = $props();
 
   let words = $derived(phrase.split(' '));
+
+  // --- Impaginazione delle righe (logica in lib/utils/boardLayout.js) ---
+  let boardW = $state(0);
+  let isSmall = $state(false);
+  $effect(() => {
+    const mq = window.matchMedia('(max-width: 480px)');
+    isSmall = mq.matches;
+    const h = (e) => { isSmall = e.matches; };
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  });
+
+  let metrics = $derived(isSmall
+    ? { tile: 28, gap: 2, space: 10, boardGap: 2 }
+    : { tile: 40, gap: 5, space: 14, boardGap: 6 });
+
+  // arrotondata: senza, una variazione di un pixel rifa' l'impaginazione e le
+  // caselle sembrano "ricaricarsi"
+  let boardStep = $derived(Math.floor(boardW / 6) * 6);
+  let lines = $derived(layoutPhrase(words, boardStep, metrics));
+
+  // Se una parola (o una riga) e' piu' larga del tabellone non si spezza mai a
+  // meta': si stringono le caselle quel tanto che basta perche' entri tutto.
+  let scala = $derived.by(() => {
+    if (!boardStep || !lines.length) return 1;
+    const larga = Math.max(...lines.map(r => rowWidth(r, words, metrics)));
+    if (larga <= boardStep) return 1;
+    return Math.max(boardStep / larga, 0.5);
+  });
+
+  let tileStyle = $derived(scala === 1 ? '' : [
+    `--tile-w: ${(metrics.tile * scala).toFixed(1)}px`,
+    `--tile-h: ${((isSmall ? 36 : 50) * scala).toFixed(1)}px`,
+    `--tile-font: ${((isSmall ? 0.95 : 1.3) * scala).toFixed(2)}rem`,
+  ].join('; '));
 
   // Build absolute index mapping
   function getAbsoluteIndex(wordIndex, charIndex) {
@@ -42,25 +78,31 @@
 </script>
 
 <div class="board">
-  {#each words as word, wi}
-    <div class="word">
-      {#each word.split('') as char, ci}
-        {@const absIdx = getAbsoluteIndex(wi, ci)}
-        <LetterTile
-          {char}
-          revealed={isRevealed(char, absIdx)}
-          jollyRevealed={isJollyRevealed(char, absIdx)}
-          clickable={isTileClickable(char, absIdx)}
-          onclick={() => {
-            if (isTileClickable(char, absIdx)) onJollyPick(absIdx);
-          }}
-        />
-      {/each}
-    </div>
-    {#if wi < words.length - 1}
-      <div class="word-space"></div>
-    {/if}
-  {/each}
+  <div class="lines" bind:clientWidth={boardW} style={tileStyle}>
+    {#each lines as line, li (li)}
+      <div class="line">
+        {#each line as wi, k (wi)}
+          <div class="word">
+            {#each words[wi].split('') as char, ci (ci)}
+              {@const absIdx = getAbsoluteIndex(wi, ci)}
+              <LetterTile
+                {char}
+                revealed={isRevealed(char, absIdx)}
+                jollyRevealed={isJollyRevealed(char, absIdx)}
+                clickable={isTileClickable(char, absIdx)}
+                onclick={() => {
+                  if (isTileClickable(char, absIdx)) onJollyPick(absIdx);
+                }}
+              />
+            {/each}
+          </div>
+          {#if k < line.length - 1}
+            <div class="word-space"></div>
+          {/if}
+        {/each}
+      </div>
+    {/each}
+  </div>
 </div>
 
 {#if jollyMode}
@@ -70,15 +112,26 @@
 <style>
   .board {
     display: flex;
-    flex-wrap: wrap;
     justify-content: center;
-    align-items: center;
-    gap: 6px;
     padding: 1.6rem 1.4rem;
     background: var(--glass);
     border-radius: 20px;
     border: 1px solid var(--glass-border);
     min-height: 80px;
+  }
+  .lines {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+  .line {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
   }
   .word {
     display: flex;
@@ -104,8 +157,9 @@
   @media (max-width: 480px) {
     .board {
       padding: 1rem 0.5rem;
-      gap: 2px;
     }
+    .lines { gap: 5px; }
+    .line { gap: 2px; }
     .word { gap: 2px; }
     .word-space { width: 10px; }
   }

@@ -815,6 +815,7 @@
             <LetterPicker
               mode="consonant"
               usedLetters={game.usedLetters}
+              showHint={false}
               onPick={handlePickConsonant}
             />
           {/if}

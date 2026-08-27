@@ -20,7 +20,7 @@
   let showDailyResult = $state(false);
 
   let section = $state(null); // null (home) | 'multi'
-  let multiMode = $state('local'); // 'local' | 'online'
+  let multiMode = $state('online'); // 'online' | 'local' — Online e' la modalita' principale
   let numPlayers = $state(2);
   let playerNames = $state(['', '']);
   let numRounds = $state(1);
@@ -180,11 +180,11 @@
 
         {#if !inLobby}
           <div class="mode-toggle">
-            <button class="chip" class:active={multiMode === 'local'} onclick={() => { multiMode = 'local'; }}>
-              Stesso schermo
-            </button>
             <button class="chip" class:active={multiMode === 'online'} onclick={() => { multiMode = 'online'; }}>
               Online
+            </button>
+            <button class="chip" class:active={multiMode === 'local'} onclick={() => { multiMode = 'local'; }}>
+              Stesso schermo
             </button>
           </div>
         {/if}

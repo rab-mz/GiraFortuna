@@ -1,7 +1,7 @@
 <script>
   import { isVowel } from '../lib/utils/italian.js';
 
-  let { mode = 'consonant', usedLetters = new Set(), onPick = () => {} } = $props();
+  let { mode = 'consonant', usedLetters = new Set(), onPick = () => {}, showHint = true } = $props();
 
   const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
@@ -14,9 +14,11 @@
 </script>
 
 <div class="picker">
-  <p class="hint">
-    {mode === 'consonant' ? 'Scegli una consonante' : 'Scegli una vocale'}
-  </p>
+  {#if showHint}
+    <p class="hint">
+      {mode === 'consonant' ? 'Scegli una consonante' : 'Scegli una vocale'}
+    </p>
+  {/if}
   <div class="keys">
     {#each LETTERS as letter}
       <button
