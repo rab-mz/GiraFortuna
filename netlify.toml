@@ -1,0 +1,14 @@
+# Un solo dominio canonico: giralafortuna.it.
+# girafortuna.it resta di proprieta' ma manda qui con un 301 permanente,
+# altrimenti i due domini servono lo stesso sito ed e' contenuto duplicato.
+[[redirects]]
+  from = "https://girafortuna.it/*"
+  to = "https://giralafortuna.it/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "https://www.girafortuna.it/*"
+  to = "https://giralafortuna.it/:splat"
+  status = 301
+  force = true
