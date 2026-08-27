@@ -1,7 +1,7 @@
 <script>
   import { fly } from 'svelte/transition';
 
-  let consent = $state(null); // null = not decided, 'granted' | 'denied'
+  let consent = $state(null); // null = non deciso, 'granted' | 'denied'
   let showDetails = $state(false);
 
   if (typeof window !== 'undefined') {
@@ -13,11 +13,9 @@
   }
 
   function applyConsent(value) {
-    // Google Consent Mode v2
+    // Google Consent Mode v2. Il sito non mostra annunci: i permessi
+    // pubblicitari restano negati, si chiede solo la statistica.
     window.gtag?.('consent', 'update', {
-      ad_storage: value,
-      ad_user_data: value,
-      ad_personalization: value,
       analytics_storage: value,
     });
   }
@@ -34,232 +32,166 @@
     applyConsent('denied');
   }
 
+  // Spinge giu' la pagina quanto e' alta la barra, cosi' non copre l'intestazione.
+  let barEl = $state(null);
+  $effect(() => {
+    if (consent !== null || !barEl) return;
+    const apply = () => { document.body.style.paddingTop = `${barEl.offsetHeight}px`; };
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(barEl);
+    return () => {
+      ro.disconnect();
+      document.body.style.paddingTop = '';
+    };
+  });
+
   function toggleDetails() {
     showDetails = !showDetails;
   }
 </script>
 
 {#if consent === null}
-  <div class="banner" transition:fly={{ y: -80, x: 40, duration: 400, delay: 800 }}>
-    <div class="banner-inner">
-      <div class="header">
-        <span class="cookie-icon">&#127856;</span>
-        <span class="title">Cookie & Privacy</span>
-      </div>
-
-      <p class="msg">
-        Usiamo cookie per migliorare il gioco e mostrare annunci.
-        {#if !showDetails}
-          <button class="link-btn" onclick={toggleDetails}>Dettagli</button>
-        {/if}
-      </p>
-
-      {#if showDetails}
-        <div class="details" transition:fly={{ y: -10, duration: 200 }}>
-          <div class="detail-row">
-            <span class="dot dot-green"></span>
-            <span><strong>Tecnici</strong> — necessari al funzionamento</span>
-          </div>
-          <div class="detail-row">
-            <span class="dot dot-blue"></span>
-            <span><strong>Analytics</strong> — visite e sessioni di gioco</span>
-          </div>
-          <div class="detail-row">
-            <span class="dot dot-gold"></span>
-            <span><strong>Pubblicita'</strong> — annunci di Google AdSense</span>
-          </div>
-          <button class="link-btn" onclick={toggleDetails}>Nascondi</button>
-        </div>
-      {/if}
-
-      <div class="buttons">
-        <button class="btn btn-accept" onclick={accept}>Accetta</button>
-        <button class="btn btn-deny" onclick={deny}>Rifiuta</button>
-      </div>
+  <!-- entra con calma, esce subito: il `delay` di `transition:` valeva anche in uscita -->
+  <div
+    class="bar"
+    bind:this={barEl}
+    in:fly={{ y: -40, duration: 300, delay: 800 }}
+    out:fly={{ y: -30, duration: 160 }}
+  >
+    <div class="row">
+      <span class="msg">
+        Usiamo cookie tecnici e di statistica. Nessuna pubblicita'.
+        <button class="link" onclick={toggleDetails}>
+          {showDetails ? 'Nascondi' : 'Dettagli'}
+        </button>
+      </span>
+      <span class="actions">
+        <button class="btn deny" onclick={deny}>Rifiuta</button>
+        <button class="btn accept" onclick={accept}>Accetta</button>
+      </span>
     </div>
+
+    {#if showDetails}
+      <ul class="details" transition:fly={{ y: -8, duration: 160 }}>
+        <li><span class="dot green"></span><strong>Tecnici</strong>: necessari al funzionamento</li>
+        <li><span class="dot blue"></span><strong>Statistica</strong>: visite e sessioni di gioco</li>
+      </ul>
+    {/if}
   </div>
 {/if}
 
 <style>
-  .banner {
+  .bar {
     position: fixed;
-    top: 60px;
-    right: 1rem;
+    top: 0;
+    left: 0;
+    right: 0;
     z-index: 500;
-    max-width: 340px;
-    width: calc(100% - 2rem);
-    pointer-events: auto;
+    padding: 0.55rem 0.9rem;
+    background: rgba(20, 26, 61, 0.94);
+    border-bottom: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px);
   }
-
-  .banner-inner {
-    background: linear-gradient(145deg, rgba(13, 27, 74, 0.97), rgba(26, 35, 126, 0.95));
-    border: 2px solid rgba(255, 215, 0, 0.35);
-    border-radius: 16px;
-    padding: 1rem 1.2rem;
-    backdrop-filter: blur(16px);
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      0 0 20px rgba(255, 215, 0, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
-
-  .header {
+  .row {
+    max-width: 900px;
+    margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
+    justify-content: center;
+    gap: 0.9rem;
+    flex-wrap: wrap;
   }
-
-  .cookie-icon {
-    font-size: 1.4rem;
-    animation: wobble 2s ease-in-out infinite;
-  }
-
-  @keyframes wobble {
-    0%, 100% { transform: rotate(0deg); }
-    25% { transform: rotate(-10deg) scale(1.1); }
-    75% { transform: rotate(8deg) scale(1.05); }
-  }
-
-  .title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #ffd700;
-    letter-spacing: 1px;
-    text-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
-  }
-
   .msg {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    color: rgba(255, 255, 255, 0.75);
-    line-height: 1.5;
-    margin: 0 0 0.7rem;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    line-height: 1.35;
+    color: var(--text-dim);
   }
-
-  .link-btn {
+  .link {
     background: none;
     border: none;
-    color: rgba(255, 215, 0, 0.7);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.75rem;
-    cursor: pointer;
     padding: 0;
+    font: inherit;
+    color: var(--amber);
     text-decoration: underline;
-    text-underline-offset: 2px;
-    transition: color 0.2s;
+    cursor: pointer;
   }
-  .link-btn:hover {
-    color: #ffd700;
-  }
-
-  .details {
+  .actions {
     display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    margin-bottom: 0.7rem;
-    padding: 0.5rem 0.6rem;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-  }
-
-  .detail-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.72rem;
-    color: rgba(255, 255, 255, 0.65);
-  }
-
-  .detail-row strong {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+    gap: 0.45rem;
     flex-shrink: 0;
   }
-  .dot-green { background: #4CAF50; box-shadow: 0 0 4px rgba(76, 175, 80, 0.5); }
-  .dot-blue { background: #42A5F5; box-shadow: 0 0 4px rgba(66, 165, 245, 0.5); }
-  .dot-gold { background: #ffd700; box-shadow: 0 0 4px rgba(255, 215, 0, 0.5); }
-
-  .buttons {
-    display: flex;
-    gap: 0.5rem;
-  }
-
   .btn {
-    flex: 1;
-    padding: 0.5rem 0.8rem;
+    padding: 0.35rem 0.9rem;
     border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
+  }
+  .accept {
+    background: var(--amber);
+    color: var(--ink);
     border: none;
   }
+  .accept:hover {
+    background: var(--amber-bright);
+  }
+  .deny {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--glass-border-strong);
+  }
+  .deny:hover {
+    color: var(--text);
+    background: var(--glass-strong);
+  }
+  .details {
+    max-width: 900px;
+    margin: 0.5rem auto 0.15rem;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 1.2rem;
+    font-family: var(--font-ui);
+    font-size: 0.76rem;
+    color: var(--text-faint);
+  }
+  .details strong {
+    color: rgba(244, 242, 255, 0.8);
+    font-weight: 600;
+  }
+  .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 0.4rem;
+    vertical-align: 1px;
+  }
+  .green { background: var(--mint); }
+  .blue { background: var(--cobalt); }
 
-  .btn-accept {
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
-    box-shadow: 0 3px 12px rgba(255, 215, 0, 0.3);
-  }
-  .btn-accept:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 5px 18px rgba(255, 215, 0, 0.4);
-  }
-  .btn-accept:active {
-    transform: translateY(0);
-  }
-
-  .btn-deny {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-  }
-  .btn-deny:hover {
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  /* Desktop: bigger */
-  @media (min-width: 641px) {
-    .banner {
-      max-width: 380px;
-      top: 70px;
-      right: 1.5rem;
-    }
-    .banner-inner {
-      padding: 1.2rem 1.5rem;
-    }
-    .title {
-      font-size: 1.15rem;
+  @media (max-width: 560px) {
+    .row {
+      justify-content: space-between;
+      gap: 0.6rem;
     }
     .msg {
-      font-size: 0.82rem;
+      font-size: 0.76rem;
+      flex: 1;
+      min-width: 12rem;
     }
     .btn {
-      font-size: 0.95rem;
-      padding: 0.55rem 1rem;
+      padding: 0.35rem 0.7rem;
+      font-size: 0.78rem;
     }
-  }
-
-  /* Small mobile */
-  @media (max-width: 380px) {
-    .banner {
-      right: 0.5rem;
-      width: calc(100% - 1rem);
-      max-width: none;
-    }
-    .banner-inner {
-      padding: 0.8rem 1rem;
+    .details {
+      flex-direction: column;
+      gap: 0.25rem;
     }
   }
 </style>

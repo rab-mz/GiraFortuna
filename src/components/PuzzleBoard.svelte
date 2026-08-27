@@ -73,31 +73,32 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 4px;
-    padding: 1.5rem 1rem;
-    background: rgba(0,0,0,0.3);
-    border-radius: 12px;
-    border: 2px solid rgba(255,215,0,0.2);
+    gap: 6px;
+    padding: 1.6rem 1.4rem;
+    background: var(--glass);
+    border-radius: 20px;
+    border: 1px solid var(--glass-border);
     min-height: 80px;
   }
   .word {
     display: flex;
-    gap: 3px;
+    gap: 5px;
   }
   .word-space {
     width: 14px;
   }
   .jolly-hint {
     text-align: center;
-    color: #00e676;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    color: var(--mint);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.95rem;
     margin-top: 0.5rem;
     animation: pulseGlow 1.5s ease-in-out infinite;
   }
   @keyframes pulseGlow {
     0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; text-shadow: 0 0 10px rgba(0,230,118,0.5); }
+    50% { opacity: 1; text-shadow: 0 0 10px rgba(51,214,181,0.5); }
   }
 
   @media (max-width: 480px) {

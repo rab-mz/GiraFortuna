@@ -1,23 +1,23 @@
 {
   "name": "Gira la Fortuna",
-  "short_name": "GiraFortuna",
+  "short_name": "GiraLaFortuna",
   "description": "Gira la ruota, indovina la frase! Gioca gratis online.",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     },
     {
       "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ],
-  "theme_color": "#1a237e",
-  "background_color": "#0d1b4a",
+  "theme_color": "#0A0E23",
+  "background_color": "#0A0E23",
   "display": "standalone",
   "start_url": "/",
   "lang": "it"

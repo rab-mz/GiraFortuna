@@ -10,7 +10,10 @@
   import GameOverScreen from './GameOverScreen.svelte';
   import MobilePlayerStrip from './MobilePlayerStrip.svelte';
   import ScoreDisplay from './ScoreDisplay.svelte';
+  import Icon from './Icon.svelte';
+  import SpicchiLogo from './SpicchiLogo.svelte';
   import { settings } from '../lib/stores/settingsStore.svelte.js';
+  import { formatEuro } from '../lib/utils/format.js';
 
   let {
     game,
@@ -70,6 +73,13 @@
     }
   });
   let showWaiting = $derived(isOnline && !isMyTurn && waitingMessage() !== null);
+
+  // Timer visibile (anello sull'avatar attivo) solo nelle fasi in cui conta
+  let timerRunning = $derived(
+    game.isMultiplayer &&
+    game.turnTimer > 0 &&
+    ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly', 'solving'].includes(game.phase)
+  );
 </script>
 
 <div class="mobile-app">
@@ -78,7 +88,10 @@
     <button class="btn-menu" onclick={onGoToMenu} title="Menu">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
     </button>
-    <span class="header-title">Gira la Fortuna</span>
+    <div class="header-brand">
+      <SpicchiLogo size={18} />
+      <span class="header-title">Gira la Fortuna</span>
+    </div>
     <div class="header-right">
       {#if isOnline}
         <span class="online-badge">
@@ -87,10 +100,10 @@
         </span>
       {/if}
       {#if game.totalRounds > 1}
-        <span class="round-badge">{game.currentRound}/{game.totalRounds}</span>
+        <span class="round-badge">R. {game.currentRound}/{game.totalRounds}</span>
       {/if}
       <button class="btn-audio" onclick={onToggleAudio}>
-        {settings.soundEnabled ? '🔊' : '🔇'}
+        <Icon name={settings.soundEnabled ? 'audio-on' : 'audio-off'} size={17} />
       </button>
     </div>
   </header>
@@ -105,16 +118,17 @@
         showTotal={game.totalRounds > 1}
         isMultiplayer={true}
         turnTimer={game.turnTimer}
-        showTimer={true}
+        timerTotal={settings.timerSeconds}
+        showTimer={timerRunning}
       />
       {#if isOnline && isMyTurn && game.phase !== 'spinning'}
         <span class="your-turn-pill">Il tuo turno!</span>
       {/if}
     {:else}
       <div class="single-score">
-        <span class="score-amount">{game.currentPlayer.money.toLocaleString('it-IT')} €</span>
+        <span class="score-amount">{formatEuro(game.currentPlayer.money)}</span>
         {#if game.totalRounds > 1}
-          <span class="score-total">Tot: {(game.totalScores[0] || 0).toLocaleString('it-IT')} €</span>
+          <span class="score-total">Tot: {formatEuro(game.totalScores[0] || 0)}</span>
         {/if}
       </div>
     {/if}
@@ -127,10 +141,9 @@
     </div>
   {/if}
 
-  <!-- Category (inline) -->
+  <!-- Category -->
   <div class="category-line">
-    <span class="cat-label">Categoria:</span>
-    <span class="cat-value">{game.phraseObj.category}</span>
+    <CategoryBanner category={game.phraseObj.category} />
   </div>
 
   <!-- PuzzleBoard: always visible -->
@@ -156,7 +169,7 @@
     {#if showPicker}
       <div class="picker-area" in:slide={{ duration: 250, delay: 100 }} out:slide={{ duration: 200 }}>
         {#if game.phase === 'picking_consonant'}
-          <p class="picker-hint">Valore: <strong>{game.currentSpinValue}€</strong> — scegli una consonante!</p>
+          <p class="picker-hint">Vale <strong>{formatEuro(game.currentSpinValue)}</strong> a lettera: scegli una consonante</p>
         {/if}
         <LetterPicker
           mode={pickerMode}
@@ -178,7 +191,7 @@
         segments={currentSegments}
         spinning={game.phase === 'spinning'}
         canSpin={game.canSpin && (!isOnline || isMyTurn)}
-        forcedResult={isOnline ? forcedSpinIndex : null}
+        forcedResult={forcedSpinIndex}
         onSpin={onStartSpin}
         onResult={onSpinResult}
       />
@@ -189,9 +202,9 @@
   {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
     <p class="step-hint" in:fade={{ duration: 200 }}>
       {#if !game.consonantsLeft && !game.vowelsLeft}
-        Tutte le lettere note — risolvi la frase!
+        Tutte le lettere sono note: risolvi la frase
       {:else if !game.consonantsLeft}
-        Nessuna consonante rimasta — compra una vocale o risolvi!
+        Niente più consonanti: compra una vocale o risolvi
       {:else if !game.hasSpunThisTurn}
         Gira la ruota per iniziare il turno
       {:else}
@@ -235,6 +248,8 @@
       players={game.players}
       isMultiplayer={game.isMultiplayer}
       phrase={game.phraseObj.text}
+      category={game.phraseObj.category}
+      song={game.phraseObj.song}
       currentRound={game.currentRound}
       totalRounds={game.totalRounds}
       totalScores={game.totalScores}
@@ -252,6 +267,8 @@
       players={game.players}
       isMultiplayer={game.isMultiplayer}
       phrase={game.phraseObj.text}
+      category={game.phraseObj.category}
+      song={game.phraseObj.song}
       currentRound={game.currentRound}
       totalRounds={game.totalRounds}
       totalScores={game.totalScores}
@@ -284,16 +301,16 @@
     z-index: 50;
     display: flex;
     align-items: center;
-    padding: 0.35rem 0.5rem;
-    background: rgba(13, 27, 74, 0.95);
+    padding: 0.45rem 0.6rem;
+    background: rgba(10, 14, 35, 0.95);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,215,0,0.12);
+    border-bottom: 1px solid var(--glass-border);
     gap: 0.4rem;
   }
   .btn-menu {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.5);
+    color: rgba(244,242,255,0.6);
     padding: 0.2rem;
     cursor: pointer;
     display: flex;
@@ -301,15 +318,22 @@
     flex-shrink: 0;
   }
   .btn-menu:active {
-    color: #ffd700;
+    color: var(--amber);
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
   }
   .header-title {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 0.95rem;
+    font-family: var(--font-display);
+    color: var(--text);
+    font-size: 0.72rem;
     font-weight: 700;
     white-space: nowrap;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   .header-right {
     display: flex;
@@ -320,31 +344,26 @@
   .online-badge {
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #ffd700;
-    background: rgba(255,215,0,0.08);
-    border: 1px solid rgba(255,215,0,0.2);
-    border-radius: 5px;
-    padding: 0.1rem 0.4rem;
-    letter-spacing: 1.5px;
+    gap: 0.3rem;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--mint);
   }
   .online-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #4CAF50;
+    background: var(--mint);
     flex-shrink: 0;
   }
   .round-badge {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
-    color: rgba(255,215,0,0.7);
-    background: rgba(255,215,0,0.06);
-    padding: 0.1rem 0.35rem;
-    border-radius: 4px;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    padding: 0.1rem 0.2rem;
+    white-space: nowrap;
   }
   .btn-audio {
     background: none;
@@ -357,20 +376,16 @@
 
   /* --- Player Area --- */
   .player-area {
-    padding: 0.3rem 0.5rem;
+    padding: 0.4rem 0.6rem 0;
     display: flex;
     align-items: center;
     gap: 0.4rem;
   }
   .your-turn-pill {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #4CAF50;
-    background: rgba(76,175,80,0.15);
-    border: 1px solid rgba(76,175,80,0.3);
-    padding: 0.15rem 0.5rem;
-    border-radius: 12px;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--mint);
     white-space: nowrap;
     animation: pulse 1.5s ease-in-out infinite;
     flex-shrink: 0;
@@ -384,16 +399,15 @@
     justify-content: center;
   }
   .score-amount {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: 1.25rem;
     font-weight: 700;
-    color: #ffd700;
-    text-shadow: 0 0 8px rgba(255,215,0,0.3);
+    color: var(--amber);
   }
   .score-total {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.8rem;
-    color: #4CAF50;
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    color: var(--mint);
     font-weight: 600;
   }
 
@@ -401,46 +415,34 @@
   .disconnect-banner {
     text-align: center;
     padding: 0.5rem;
-    background: rgba(255,82,82,0.12);
-    border: 1px solid rgba(255,82,82,0.3);
-    color: #ff5252;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.9rem;
-    margin: 0.3rem 0.5rem;
-    border-radius: 8px;
+    background: rgba(255,93,115,0.1);
+    border: 1px solid rgba(255,93,115,0.35);
+    color: var(--coral);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin: 0.3rem 0.6rem;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
   }
   .disconnect-btn {
-    background: rgba(255,82,82,0.2);
-    border: 1px solid rgba(255,82,82,0.4);
-    color: #ff5252;
+    background: rgba(255,93,115,0.15);
+    border: 1px solid rgba(255,93,115,0.4);
+    color: var(--coral);
     padding: 0.25rem 0.8rem;
-    border-radius: 5px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.8rem;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.78rem;
     cursor: pointer;
   }
 
   /* --- Category --- */
   .category-line {
-    text-align: center;
-    padding: 0.25rem 0.5rem;
-    font-family: 'Oswald', sans-serif;
-  }
-  .cat-label {
-    color: rgba(255,255,255,0.4);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  .cat-value {
-    color: #ffd700;
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-left: 0.3rem;
+    padding: 0.5rem 0.6rem 0.1rem;
   }
 
   /* --- Phase Area --- */
@@ -465,17 +467,17 @@
   }
   .picker-hint {
     text-align: center;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
-    color: #00e676;
-    margin: 0 0 0.4rem;
-    padding: 0.4rem 0.8rem;
-    background: rgba(0,230,118,0.06);
-    border: 1px solid rgba(0,230,118,0.2);
-    border-radius: 8px;
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 0.98rem;
+    line-height: 1.3;
+    color: var(--mint);
+    margin: 0 0 0.5rem;
+    padding: 0.2rem 0.6rem;
   }
   .picker-hint strong {
-    font-size: 1.1rem;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
   }
 
   /* --- Jolly Area --- */
@@ -489,20 +491,22 @@
     display: inline-flex;
     align-items: center;
     gap: 0.6rem;
-    background: linear-gradient(135deg, rgba(0,137,123,0.2), rgba(0,230,118,0.1));
-    border: 2px solid rgba(0,230,118,0.4);
-    border-radius: 12px;
+    background: rgba(51,214,181,0.1);
+    border: 1.5px solid rgba(51,214,181,0.45);
+    border-radius: 14px;
     padding: 0.7rem 1.2rem;
     animation: jollyPulse 1.5s ease-in-out infinite;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    color: #00e676;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--mint);
   }
   .jolly-icon {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
-    color: #00897B;
-    background: rgba(0,137,123,0.2);
+    font-family: var(--font-display);
+    color: var(--mint);
+    background: rgba(51,214,181,0.15);
     border-radius: 50%;
     width: 34px;
     height: 34px;
@@ -511,17 +515,19 @@
     justify-content: center;
   }
   @keyframes jollyPulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(0,230,118,0.1); }
-    50% { box-shadow: 0 0 20px rgba(0,230,118,0.3); }
+    0%, 100% { box-shadow: 0 0 8px rgba(51,214,181,0.1); }
+    50% { box-shadow: 0 0 20px rgba(51,214,181,0.3); }
   }
 
   /* --- Step Hint --- */
   .step-hint {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    color: rgba(255,215,0,0.55);
+    font-family: var(--font-display);
+    font-size: 0.98rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--amber);
     text-align: center;
-    padding: 0.3rem 0.6rem;
+    padding: 0.35rem 0.6rem;
     margin: 0;
   }
 
@@ -530,11 +536,11 @@
     position: sticky;
     bottom: 0;
     z-index: 40;
-    padding: 0.5rem 0.5rem;
-    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
-    background: rgba(13, 27, 74, 0.95);
+    padding: 0.6rem 0.6rem;
+    padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(10, 14, 35, 0.95);
     backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255,215,0,0.12);
+    border-top: 1px solid var(--glass-border);
   }
 
   /* --- Waiting for opponent --- */
@@ -548,12 +554,12 @@
     padding: 2rem 1rem;
   }
   .waiting-text {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    color: rgba(255,215,0,0.7);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-dim);
     text-align: center;
     margin: 0;
-    letter-spacing: 0.5px;
   }
 
   @keyframes pulse {

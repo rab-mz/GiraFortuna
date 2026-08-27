@@ -21,6 +21,7 @@ function createGame() {
   // --- Round system ---
   let currentRound = $state(1);
   let totalRounds = $state(1);
+  let phrasePlaylist = null;
   let totalScores = $state([]);
 
   // --- Game state ---
@@ -43,35 +44,49 @@ function createGame() {
   let lastSpinIndex = $state(null);
 
   // --- Timer ---
+  // Basato su una deadline (timestamp): il countdown si calcola dall'orologio,
+  // quindi non deriva con i tab in background e si può sincronizzare online.
   let turnTimer = $state(settings.timerSeconds);
+  let turnDeadline = null; // epoch ms (orologio locale) di fine turno
   let timerInterval = null;
   let _onTimerExpired = null;
+
+  function tickFromDeadline(onExpire) {
+    turnTimer = Math.max(0, Math.ceil((turnDeadline - Date.now()) / 1000));
+    if (turnTimer <= 0) {
+      stopTimer();
+      if (onExpire) onExpire();
+    }
+  }
 
   function startTimer() {
     if (!isMultiplayer) return;
     stopTimer();
     turnTimer = settings.timerSeconds;
+    turnDeadline = Date.now() + settings.timerSeconds * 1000;
     timerInterval = setInterval(() => {
-      turnTimer--;
-      if (turnTimer <= 0) {
-        stopTimer();
+      tickFromDeadline(() => {
         showMessage(`Tempo scaduto! ${currentPlayer.name} perde il turno.`);
         nextTurn();
         if (_onTimerExpired) _onTimerExpired();
-      }
-    }, 1000);
+      });
+    }, 250);
   }
 
   // Display-only timer for clients (counts down but does NOT call nextTurn)
-  function startDisplayTimer() {
+  function startDisplayTimer(remainingMs) {
     stopTimer();
-    if (turnTimer <= 0) return;
-    timerInterval = setInterval(() => {
-      turnTimer--;
-      if (turnTimer <= 0) {
-        stopTimer();
-      }
-    }, 1000);
+    if (remainingMs == null || remainingMs <= 0) return;
+    turnDeadline = Date.now() + remainingMs;
+    turnTimer = Math.ceil(remainingMs / 1000);
+    timerInterval = setInterval(() => tickFromDeadline(null), 250);
+  }
+
+  // Riallinea il countdown del client alla deadline dell'host (heartbeat)
+  function syncTimer(remainingMs) {
+    const activePhases = ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly', 'solving'];
+    if (!activePhases.includes(phase)) return;
+    startDisplayTimer(remainingMs);
   }
 
   function stopTimer() {
@@ -79,10 +94,12 @@ function createGame() {
       clearInterval(timerInterval);
       timerInterval = null;
     }
+    turnDeadline = null;
   }
 
-  function resetTimer() {
-    turnTimer = settings.timerSeconds;
+  function getTurnRemainingMs() {
+    if (turnDeadline == null) return null;
+    return Math.max(0, turnDeadline - Date.now());
   }
 
   function onTimerExpired(callback) {
@@ -135,7 +152,17 @@ function createGame() {
   }
 
   // --- Setup ---
-  function startGame(playerNames, rounds = 1, seed = 'classico', firstPlayerIndex = null, phraseOverride = null) {
+  // Playlist opzionale: set di frasi fisso e in ordine (modalita' evento).
+  // Se e' nulla si pesca a caso come sempre.
+  function pickPhrase(round) {
+    if (phrasePlaylist && phrasePlaylist.length) {
+      return phrasePlaylist[(round - 1) % phrasePlaylist.length];
+    }
+    return getRandomPhrase(settings.enabledCategories, settings.difficulty);
+  }
+
+  function startGame(playerNames, rounds = 1, seed = 'classico', firstPlayerIndex = null, phraseOverride = null, playlist = null) {
+    phrasePlaylist = playlist;
     players = playerNames.map(name => ({ name, money: 0 }));
     totalRounds = rounds;
     currentRound = 1;
@@ -145,7 +172,7 @@ function createGame() {
       : (players.length > 1 ? Math.floor(Math.random() * players.length) : 0);
     currentSeed = seed;
     bankruptCount = 0;
-    phraseObj = phraseOverride || getRandomPhrase(settings.enabledCategories, settings.difficulty);
+    phraseObj = phraseOverride || pickPhrase(1);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -325,7 +352,7 @@ function createGame() {
   // Next round (after round_won screen)
   function nextRound() {
     currentRound++;
-    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
+    phraseObj = pickPhrase(currentRound);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -349,7 +376,7 @@ function createGame() {
     currentRound = 1;
     bankruptCount = 0;
     totalScores = players.map(() => 0);
-    phraseObj = getRandomPhrase(settings.enabledCategories, settings.difficulty);
+    phraseObj = pickPhrase(1);
     revealedLetters = new Set();
     usedLetters = new Set();
     jollyRevealedPositions = new Set();
@@ -421,7 +448,7 @@ function createGame() {
       currentRound,
       totalRounds,
       totalScores: [...totalScores],
-      phraseObj: { text: phraseObj.text, category: phraseObj.category },
+      phraseObj: { text: phraseObj.text, category: phraseObj.category, song: phraseObj.song },
       revealedLetters: [...revealedLetters],
       usedLetters: [...usedLetters],
       jollyRevealedPositions: [...jollyRevealedPositions],
@@ -432,6 +459,7 @@ function createGame() {
       roundWinner,
       lastSpinIndex,
       turnTimer,
+      turnRemainingMs: getTurnRemainingMs(),
       message,
       currentSeed,
       bankruptCount,
@@ -465,10 +493,11 @@ function createGame() {
     if (state.message) {
       showMessage(state.message);
     }
-    // Start display-only countdown on the client so timer ticks visually
+    // Countdown display-only dalla deadline dell'host (fallback: turnTimer legacy in secondi)
     const activePhases = ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly', 'solving'];
-    if (turnTimer > 0 && activePhases.includes(phase)) {
-      startDisplayTimer();
+    if (activePhases.includes(phase)) {
+      const remainingMs = state.turnRemainingMs !== undefined ? state.turnRemainingMs : turnTimer * 1000;
+      startDisplayTimer(remainingMs);
     }
   }
 
@@ -479,7 +508,7 @@ function createGame() {
     currentRound = savedState.currentRound;
     totalRounds = savedState.totalRounds;
     totalScores = [...savedState.totalScores];
-    phraseObj = { text: savedState.phraseObj.text, category: savedState.phraseObj.category };
+    phraseObj = { text: savedState.phraseObj.text, category: savedState.phraseObj.category, song: savedState.phraseObj.song };
     revealedLetters = new Set(savedState.revealedLetters);
     usedLetters = new Set(savedState.usedLetters);
     jollyRevealedPositions = new Set(savedState.jollyRevealedPositions);
@@ -547,6 +576,8 @@ function createGame() {
     getSerializableState,
     applyRemoteState,
     onTimerExpired,
+    syncTimer,
+    getTurnRemainingMs,
     restoreFromSession,
   };
 }

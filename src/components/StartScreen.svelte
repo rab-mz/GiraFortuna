@@ -2,12 +2,14 @@
   import { online } from '../lib/stores/onlineStore.svelte.js';
   import { daily } from '../lib/stores/dailyStore.svelte.js';
   import { generalStats } from '../lib/stores/generalStatsStore.svelte.js';
-  import { SEED_LIST } from '../lib/logic/wheelSeeds.js';
+  import { SEEDS, SEED_LIST } from '../lib/logic/wheelSeeds.js';
   import HowToPlay from './HowToPlay.svelte';
   import PrivacyPolicy from './PrivacyPolicy.svelte';
   import SettingsModal from './SettingsModal.svelte';
   import StatsModal from './StatsModal.svelte';
   import DailyResultCard from './DailyResultCard.svelte';
+  import SpicchiLogo from './SpicchiLogo.svelte';
+  import Wheel from './Wheel.svelte';
 
   let { onStart = () => {}, onOnlineStart = () => {}, onDailyStart = () => {} } = $props();
 
@@ -17,32 +19,47 @@
   let showStats = $state(false);
   let showDailyResult = $state(false);
 
-  let mode = $state('single'); // single | multi | online
+  let section = $state(null); // null (home) | 'multi'
+  let multiMode = $state('local'); // 'local' | 'online'
   let numPlayers = $state(2);
   let playerNames = $state(['', '']);
   let numRounds = $state(1);
   let selectedSeed = $state('classico');
-  let showOptions = $state(false);
-  let expandedSection = $state(null); // null | 'multi' | 'online'
 
   // Online state
-  let onlineMode = $state(null); // null | 'create' | 'join'
+  let onlineMode = $state(null); // null | 'join'
   let onlineName = $state('');
   let joinCode = $state('');
   let onlineRounds = $state(1);
+
+  let decoSegments = $derived(SEEDS[selectedSeed]?.segments ?? SEEDS.classico.segments);
+
+  // Ruota decorativa: fuori quadro a destra sul desktop, sotto il menu sul telefono
+  let heroSize = $state(880);
+  $effect(() => {
+    const update = () => {
+      heroSize = window.innerWidth <= 1020
+        ? Math.min(Math.round(window.innerWidth * 1.05), 460)
+        : 880;
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  });
+  let inLobby = $derived(online.mode !== 'offline');
 
   function updateNumPlayers(n) {
     numPlayers = n;
     playerNames = Array.from({ length: n }, (_, i) => playerNames[i] || '');
   }
 
-  function handleStart() {
-    if (mode === 'single') {
-      onStart(['Giocatore'], numRounds, selectedSeed);
-    } else if (mode === 'multi') {
-      const names = playerNames.map((n, i) => n.trim() || `Giocatore ${i + 1}`);
-      onStart(names, numRounds, selectedSeed);
-    }
+  function handleSingleStart() {
+    onStart(['Giocatore'], numRounds, selectedSeed);
+  }
+
+  function handleMultiStart() {
+    const names = playerNames.map((n, i) => n.trim() || `Giocatore ${i + 1}`);
+    onStart(names, numRounds, selectedSeed);
   }
 
   function handleCreateRoom() {
@@ -57,12 +74,17 @@
   }
 
   function handleOnlineStart() {
-    const playerNames = online.connectedPlayers.map(p => p.name);
-    onOnlineStart(playerNames, onlineRounds, selectedSeed);
+    const names = online.connectedPlayers.map(p => p.name);
+    onOnlineStart(names, onlineRounds, selectedSeed);
   }
 
-  function handleBackToOnline() {
+  function handleLeaveRoom() {
     online.leaveRoom();
+    onlineMode = null;
+  }
+
+  function handleBackHome() {
+    section = null;
     onlineMode = null;
   }
 
@@ -74,338 +96,318 @@
   }
 </script>
 
-<div class="start-screen">
-  <div class="bg-ring"></div>
-  <div class="bg-ring ring2"></div>
-  <div class="bg-glow"></div>
-  <div class="bg-particles">
-    {#each Array(35) as _, i}
-      <span class="particle" style="--i:{i};--x:{5+Math.random()*90};--y:{5+Math.random()*90};--d:{3+Math.random()*5}s;--sz:{3+Math.random()*5}px;--o:{0.3+Math.random()*0.5}"></span>
-    {/each}
+<div class="start-screen" style={`--hero-size: ${heroSize}px`}>
+  <!-- Ruota decorativa a destra, mezza fuori quadro (tavola Home) -->
+  <div class="hero" aria-hidden="true">
+    <div class="hero-glow"></div>
+    <div class="hero-wheel">
+      <Wheel segments={decoSegments} decorative size={heroSize} />
+      <div class="hero-vignette"></div>
+    </div>
   </div>
 
-  <button class="settings-btn" onclick={() => { showSettings = true; }} title="Impostazioni">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  </button>
 
   <div class="content">
-    {#if !expandedSection}
-      <!-- ========== HOME VIEW ========== -->
+    {#if !section}
+      <!-- ========== HOME ========== -->
+      <div class="brand-row">
+        <SpicchiLogo size={40} />
+        <span class="tagline">Il gioco della ruota in italiano</span>
+      </div>
       <h1 class="title">Gira la<br><span>Fortuna</span></h1>
-      <p class="subtitle">Gira la ruota, indovina la frase!</p>
+      <p class="subtitle">Gira la ruota, compra le vocali, indovina la frase.</p>
 
-      <button class="play-btn play-btn-hero" onclick={() => { mode = 'single'; handleStart(); }}>
-        GIOCA
-      </button>
-
-      <button
-        class="daily-btn"
-        onclick={() => {
-          if (daily.hasPlayedToday) {
-            showDailyResult = true;
-          } else {
-            onDailyStart();
-          }
-        }}
-      >
-        <span class="daily-icon">☀️</span>
-        <span class="daily-text">
-          {#if daily.hasPlayedToday}
-            VEDI RISULTATO
-          {:else}
-            FRASE DEL GIORNO
-          {/if}
-        </span>
-        {#if daily.streak > 0}
-          <span class="streak-badge">🔥 {daily.streak}</span>
-        {/if}
-      </button>
-
-      <button class="options-toggle" onclick={() => { showOptions = !showOptions; }}>
-        Opzioni {showOptions ? '▲' : '▼'}
-      </button>
-
-      {#if showOptions}
-        <div class="options-panel" style="animation: fadeIn 0.3s ease">
-          <div class="seed-select">
-            <span>Variante:</span>
-            <div class="seed-btns">
-              {#each SEED_LIST as seed}
-                <button
-                  class="seed-btn" class:active={selectedSeed === seed.id}
-                  title={seed.description}
-                  onclick={() => { selectedSeed = seed.id; }}
-                >{seed.name}</button>
-              {/each}
-            </div>
-            <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
-          </div>
-
-          <div class="round-select">
-            <span>Numero round:</span>
-            <div class="num-btns">
-              {#each [1, 2, 3, 4, 5] as n}
-                <button
-                  class="num-btn" class:active={numRounds === n}
-                  onclick={() => { numRounds = n; }}
-                >{n}</button>
-              {/each}
-            </div>
-          </div>
+      <div class="menu">
+        <div class="play-btn-wrapper">
+          <button class="cta-primary" onclick={handleSingleStart}>
+            <span>Gioca</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
         </div>
-      {/if}
 
-      <div class="secondary-actions">
-        <button class="secondary-btn" onclick={() => { expandedSection = 'multi'; mode = 'multi'; }}>
-          Multiplayer Locale
+        <button
+          class="menu-row"
+          onclick={() => {
+            if (daily.hasPlayedToday) {
+              showDailyResult = true;
+            } else {
+              onDailyStart();
+            }
+          }}
+        >
+          <span class="menu-icon icon-violet">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          </span>
+          <span class="menu-info">
+            <span class="menu-title">Frase del giorno</span>
+            <span class="menu-sub">
+              {#if daily.hasPlayedToday}
+                Già giocata oggi, vedi il risultato
+              {:else}
+                Puzzle n. {daily.dailyNumber}, una sola partita al giorno
+              {/if}
+            </span>
+          </span>
+          {#if daily.streak > 0}
+            <span class="streak-chip">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2c1 4-3 5-3 9a3 3 0 0 0 6 .2C15 8 19 8 17 3c3 3 5 6.5 5 10a8 8 0 1 1-16 0c0-4.5 3.5-8 6-11z"/></svg>
+              {daily.streak}
+            </span>
+          {/if}
         </button>
-        <button class="secondary-btn" onclick={() => { expandedSection = 'online'; mode = 'online'; }}>
-          Online
+
+        <button class="menu-row" onclick={() => { section = 'multi'; }}>
+          <span class="menu-icon icon-mint">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="3.2"/><circle cx="17" cy="10" r="2.6"/><path d="M2.5 20c.6-3.4 2.9-5.2 5.5-5.2S12.9 16.6 13.5 20M14.5 19.5c.5-2.6 1.9-4 3.8-4 1.6 0 2.8 1 3.4 2.8"/></svg>
+          </span>
+          <span class="menu-info">
+            <span class="menu-title">Multiplayer</span>
+            <span class="menu-sub">Sullo stesso schermo o online con codice stanza</span>
+          </span>
+          <svg class="chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
         </button>
       </div>
 
-    {:else if expandedSection === 'multi'}
-      <!-- ========== MULTIPLAYER LOCALE ========== -->
-      <div class="section-view" style="animation: fadeIn 0.3s ease">
-        <h2 class="section-title">Multiplayer Locale</h2>
+    {:else}
+      <!-- ========== MULTIPLAYER (locale + online unificati) ========== -->
+      <div class="section-view">
+        <div class="section-head">
+          <button class="back-icon" onclick={handleBackHome} title="Indietro" aria-label="Indietro" disabled={inLobby}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <h2 class="section-title">Multiplayer</h2>
+        </div>
 
-        <div class="multi-setup">
-          <div class="num-select">
-            <span>Giocatori:</span>
-            <div class="num-btns">
+        {#if !inLobby}
+          <div class="mode-toggle">
+            <button class="chip" class:active={multiMode === 'local'} onclick={() => { multiMode = 'local'; }}>
+              Stesso schermo
+            </button>
+            <button class="chip" class:active={multiMode === 'online'} onclick={() => { multiMode = 'online'; }}>
+              Online
+            </button>
+          </div>
+        {/if}
+
+        {#if multiMode === 'local'}
+          <!-- Locale 2-4 giocatori -->
+          <div class="panel">
+            <div class="opt-row">
+              <span class="opt-label">Giocatori</span>
               {#each [2, 3, 4] as n}
                 <button
-                  class="num-btn" class:active={numPlayers === n}
+                  class="round-chip"
+                  class:active={numPlayers === n}
                   onclick={() => updateNumPlayers(n)}
                 >{n}</button>
               {/each}
             </div>
-          </div>
 
-          <div class="name-inputs">
-            {#each playerNames as _, i}
-              <input
-                type="text"
-                placeholder={`Giocatore ${i + 1}`}
-                bind:value={playerNames[i]}
-              />
-            {/each}
-          </div>
-        </div>
+            <div class="name-inputs">
+              {#each playerNames as _, i}
+                <input
+                  type="text"
+                  placeholder={`Giocatore ${i + 1}`}
+                  bind:value={playerNames[i]}
+                />
+              {/each}
+            </div>
 
-        <div class="section-options">
-          <div class="seed-select">
-            <span>Variante:</span>
-            <div class="seed-btns">
+            <div class="opt-row">
+              <span class="opt-label">Ruota</span>
               {#each SEED_LIST as seed}
                 <button
-                  class="seed-btn" class:active={selectedSeed === seed.id}
+                  class="chip"
+                  class:active={selectedSeed === seed.id}
                   title={seed.description}
                   onclick={() => { selectedSeed = seed.id; }}
                 >{seed.name}</button>
               {/each}
             </div>
-            <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
-          </div>
-
-          <div class="round-select">
-            <span>Round:</span>
-            <div class="num-btns">
+            <div class="opt-row">
+              <span class="opt-label">Round</span>
               {#each [1, 2, 3, 4, 5] as n}
                 <button
-                  class="num-btn" class:active={numRounds === n}
+                  class="round-chip"
+                  class:active={numRounds === n}
                   onclick={() => { numRounds = n; }}
                 >{n}</button>
               {/each}
             </div>
           </div>
-        </div>
 
-        <button class="play-btn" onclick={handleStart}>
-          GIOCA!
-        </button>
-        <button class="back-btn" onclick={() => { expandedSection = null; mode = 'single'; }}>
-          Indietro
-        </button>
-      </div>
-
-    {:else if expandedSection === 'online'}
-      <!-- ========== ONLINE ========== -->
-      <div class="section-view" style="animation: fadeIn 0.3s ease">
-        <h2 class="section-title">Online</h2>
-
-        {#if online.error}
-          <div class="online-error">{online.error}</div>
-        {/if}
-
-        {#if online.mode === 'offline' && !onlineMode}
-          <div class="name-inputs">
-            <input
-              type="text"
-              placeholder="Il tuo nome"
-              bind:value={onlineName}
-            />
-          </div>
-
-          <div class="online-actions">
-            <button class="online-btn create" onclick={() => { handleCreateRoom(); if (online.error) { onlineMode = null; } else { onlineMode = 'create'; } }}>
-              Crea Stanza
-            </button>
-            <button class="online-btn join" onclick={() => { onlineMode = 'join'; }}>
-              Entra in Stanza
-            </button>
-          </div>
-          <button class="back-btn" onclick={() => { expandedSection = null; mode = 'single'; }}>
-            Indietro
+          <button class="cta-primary" onclick={handleMultiStart}>
+            <span>Gioca</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
           </button>
-        {/if}
 
-        {#if onlineMode === 'join' && online.mode === 'offline'}
-          <div class="name-inputs">
-            <input
-              type="text"
-              placeholder="Il tuo nome"
-              bind:value={onlineName}
-            />
-            <div class="join-row">
-              <input
-                type="text"
-                placeholder="Codice stanza"
-                bind:value={joinCode}
-                maxlength="6"
-                class="code-input"
-                oninput={(e) => { joinCode = e.target.value.toUpperCase(); }}
-              />
-              <button class="online-btn join" onclick={handleJoinRoom} disabled={joinCode.trim().length < 3}>
-                Entra
-              </button>
-            </div>
-          </div>
-          <button class="back-btn" onclick={() => { onlineMode = null; }}>
-            Indietro
-          </button>
-        {/if}
+        {:else}
+          <!-- Online -->
+          {#if online.error}
+            <div class="online-error">{online.error}</div>
+          {/if}
 
-        {#if online.mode === 'host'}
-          <div class="lobby">
-            <div class="room-code-display">
-              <span class="room-label">Codice Stanza</span>
-              <div class="room-code-row">
-                <span class="room-code">{online.roomCode}</span>
-                <button class="copy-btn" onclick={copyRoomCode} title="Copia codice">
-                  {copied ? 'Copiato!' : 'Copia'}
+          {#if !inLobby && !onlineMode}
+            <div class="panel">
+              <div class="name-inputs">
+                <input
+                  type="text"
+                  placeholder="Il tuo nome"
+                  bind:value={onlineName}
+                />
+              </div>
+              <div class="online-actions">
+                <button class="online-btn create" onclick={() => { handleCreateRoom(); if (!online.error) onlineMode = 'create'; }}>
+                  Crea stanza
+                </button>
+                <button class="online-btn join" onclick={() => { onlineMode = 'join'; }}>
+                  Entra in stanza
                 </button>
               </div>
-              {#if copied}
-                <span class="copied-toast">Codice copiato negli appunti</span>
-              {/if}
             </div>
+          {/if}
 
-            <div class="players-lobby">
-              <span class="lobby-label">Giocatori connessi ({online.connectedPlayers.length})</span>
-              <ul class="player-list">
-                {#each online.connectedPlayers as player}
-                  <li class="player-item" class:is-host={player.isHost}>
-                    <span class="player-avatar">{player.name[0].toUpperCase()}</span>
-                    <span class="player-name">{player.name}</span>
-                    {#if player.isHost}
-                      <span class="host-badge">HOST</span>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
+          {#if onlineMode === 'join' && !inLobby}
+            <div class="panel">
+              <div class="name-inputs">
+                <input
+                  type="text"
+                  placeholder="Il tuo nome"
+                  bind:value={onlineName}
+                />
+                <div class="join-row">
+                  <input
+                    type="text"
+                    placeholder="Codice stanza"
+                    bind:value={joinCode}
+                    maxlength="6"
+                    class="code-input"
+                    oninput={(e) => { joinCode = e.target.value.toUpperCase(); }}
+                  />
+                  <button class="online-btn join" onclick={handleJoinRoom} disabled={joinCode.trim().length < 3}>
+                    Entra
+                  </button>
+                </div>
+              </div>
+              <button class="back-btn" onclick={() => { onlineMode = null; }}>
+                Indietro
+              </button>
             </div>
+          {/if}
 
-            <div class="section-options">
-              <div class="round-select">
-                <span>Round:</span>
-                <div class="num-btns">
+          {#if online.mode === 'host'}
+            <div class="lobby">
+              <div class="room-code-display">
+                <span class="room-label">Codice stanza</span>
+                <div class="room-code-row">
+                  <span class="room-code">{online.roomCode}</span>
+                  <button class="copy-btn" onclick={copyRoomCode} title="Copia codice">
+                    {copied ? 'Copiato!' : 'Copia'}
+                  </button>
+                </div>
+              </div>
+
+              <div class="players-lobby">
+                <span class="lobby-label">Giocatori connessi ({online.connectedPlayers.length})</span>
+                <ul class="player-list">
+                  {#each online.connectedPlayers as player}
+                    <li class="player-item" class:is-host={player.isHost}>
+                      <span class="player-avatar">{player.name[0].toUpperCase()}</span>
+                      <span class="player-name">{player.name}</span>
+                      {#if player.isHost}
+                        <span class="host-badge">HOST</span>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+
+              <div class="panel">
+                <div class="opt-row">
+                  <span class="opt-label">Ruota</span>
+                  {#each SEED_LIST as seed}
+                    <button
+                      class="chip"
+                      class:active={selectedSeed === seed.id}
+                      title={seed.description}
+                      onclick={() => { selectedSeed = seed.id; }}
+                    >{seed.name}</button>
+                  {/each}
+                </div>
+                <div class="opt-row">
+                  <span class="opt-label">Round</span>
                   {#each [1, 2, 3, 4, 5] as n}
                     <button
-                      class="num-btn" class:active={onlineRounds === n}
+                      class="round-chip"
+                      class:active={onlineRounds === n}
                       onclick={() => { onlineRounds = n; }}
                     >{n}</button>
                   {/each}
                 </div>
               </div>
 
-              <div class="seed-select">
-                <span>Variante:</span>
-                <div class="seed-btns">
-                  {#each SEED_LIST as seed}
-                    <button
-                      class="seed-btn" class:active={selectedSeed === seed.id}
-                      title={seed.description}
-                      onclick={() => { selectedSeed = seed.id; }}
-                    >{seed.name}</button>
-                  {/each}
-                </div>
-                <p class="seed-desc">{SEED_LIST.find(s => s.id === selectedSeed)?.description ?? ''}</p>
+              <button
+                class="cta-primary"
+                onclick={handleOnlineStart}
+                disabled={online.connectedPlayers.length < 2}
+              >
+                <span>Inizia partita</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
+              <button class="back-btn" onclick={handleLeaveRoom}>
+                Annulla
+              </button>
+            </div>
+          {/if}
+
+          {#if online.mode === 'client'}
+            <div class="lobby">
+              <div class="room-code-display">
+                <span class="room-label">Stanza</span>
+                <span class="room-code">{online.roomCode}</span>
               </div>
+
+              <div class="players-lobby">
+                <span class="lobby-label">Giocatori connessi ({online.connectedPlayers.length})</span>
+                <ul class="player-list">
+                  {#each online.connectedPlayers as player}
+                    <li class="player-item" class:is-host={player.isHost}>
+                      <span class="player-avatar">{player.name[0].toUpperCase()}</span>
+                      <span class="player-name">{player.name}</span>
+                      {#if player.isHost}
+                        <span class="host-badge">HOST</span>
+                      {/if}
+                      {#if player.name === online.myName}
+                        <span class="you-badge">TU</span>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+
+              <div class="waiting-msg">
+                In attesa che l'host avvii la partita...
+              </div>
+
+              <button class="back-btn" onclick={handleLeaveRoom}>
+                Esci dalla stanza
+              </button>
             </div>
-
-            <button
-              class="play-btn"
-              onclick={handleOnlineStart}
-              disabled={online.connectedPlayers.length < 2}
-            >
-              INIZIA PARTITA
-            </button>
-            <button class="back-btn" onclick={handleBackToOnline}>
-              Annulla
-            </button>
-          </div>
-        {/if}
-
-        {#if online.mode === 'client'}
-          <div class="lobby">
-            <div class="room-code-display">
-              <span class="room-label">Stanza</span>
-              <span class="room-code">{online.roomCode}</span>
-            </div>
-
-            <div class="players-lobby">
-              <span class="lobby-label">Giocatori connessi ({online.connectedPlayers.length})</span>
-              <ul class="player-list">
-                {#each online.connectedPlayers as player}
-                  <li class="player-item" class:is-host={player.isHost}>
-                    <span class="player-avatar">{player.name[0].toUpperCase()}</span>
-                    <span class="player-name">{player.name}</span>
-                    {#if player.isHost}
-                      <span class="host-badge">HOST</span>
-                    {/if}
-                    {#if player.name === online.myName}
-                      <span class="you-badge">TU</span>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
-            </div>
-
-            <div class="waiting-msg">
-              In attesa che l'host avvii la partita...
-            </div>
-
-            <button class="back-btn" onclick={handleBackToOnline}>
-              Esci dalla stanza
-            </button>
-          </div>
+          {/if}
         {/if}
       </div>
     {/if}
+
     <footer class="footer">
       <button class="footer-link" onclick={() => { showRules = true; }}>
         Come si gioca
       </button>
-      <span class="footer-sep">·</span>
       <button class="footer-link" onclick={() => { showStats = true; }}>
         Statistiche
       </button>
-      <span class="footer-sep">·</span>
       <button class="footer-link" onclick={() => { showSettings = true; }}>
         Impostazioni
       </button>
-      <span class="footer-sep">·</span>
       <button class="footer-link" onclick={() => { showPrivacy = true; }}>
         Privacy Policy
       </button>
@@ -430,305 +432,376 @@
 <style>
   .start-screen {
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     position: relative;
     overflow: hidden;
-    padding: 2rem;
-  }
-  .bg-ring {
-    position: absolute;
-    width: 550px;
-    height: 550px;
-    border-radius: 50%;
-    border: 1.5px solid rgba(255,215,0,0.07);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    animation: ringRotate 40s linear infinite;
-  }
-  .bg-ring.ring2 {
-    width: 700px;
-    height: 700px;
-    border-color: rgba(255,215,0,0.04);
-    animation-duration: 60s;
-    animation-direction: reverse;
-  }
-  @keyframes ringRotate {
-    to { transform: translate(-50%, -50%) rotate(360deg); }
-  }
-  .bg-glow {
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,215,0,0.12) 0%, rgba(255,215,0,0.04) 35%, transparent 65%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    animation: glowPulse 5s ease-in-out infinite;
-  }
-  @keyframes glowPulse {
-    0%, 100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
-    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
-  }
-  .bg-particles {
-    position: absolute;
-    inset: 0;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .particle {
-    position: absolute;
-    width: var(--sz);
-    height: var(--sz);
-    border-radius: 50%;
-    background: rgba(255,215,0, var(--o));
-    box-shadow: 0 0 6px 1px rgba(255,215,0, calc(var(--o) * 0.5));
-    left: calc(var(--x) * 1%);
-    top: calc(var(--y) * 1%);
-    animation: particleFloat var(--d) ease-in-out infinite alternate;
-    animation-delay: calc(var(--i) * -0.4s);
-  }
-  @keyframes particleFloat {
-    0% { transform: translateY(0) scale(1); opacity: var(--o); }
-    100% { transform: translateY(-40px) scale(1.4); opacity: calc(var(--o) + 0.2); }
+    display: flex;
+    align-items: center;
   }
 
-  .settings-btn {
+  /* --- Ruota decorativa a destra --- */
+  .hero {
     position: absolute;
-    top: 1.2rem;
-    right: 1.2rem;
-    z-index: 2;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 10px;
-    padding: 0.5rem;
-    cursor: pointer;
-    color: rgba(255,255,255,0.4);
-    transition: all 0.25s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 55%;
+    pointer-events: none;
   }
-  .settings-btn:hover {
-    color: #ffd700;
-    background: rgba(255,215,0,0.1);
-    border-color: rgba(255,215,0,0.3);
+  .hero-glow {
+    position: absolute;
+    right: -320px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1100px;
+    height: 1100px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,182,63,0.14) 0%, rgba(124,108,255,0.08) 45%, rgba(10,14,35,0) 70%);
   }
+  .hero-wheel {
+    /* la ruota della Home si puo' toccare: gira al passaggio del mouse e si trascina */
+    pointer-events: auto;
+    position: absolute;
+    right: -300px;
+    top: 50%;
+    transform: translateY(-50%) rotate(-14deg);
+    width: 880px;
+    height: 880px;
+  }
+  .hero-vignette {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(10,14,35,0) 45%, rgba(10,14,35,0.55) 100%);
+  }
+
+
+
   .content {
     position: relative;
-    text-align: center;
     z-index: 1;
-    max-width: 440px;
     width: 100%;
-  }
-  .title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 3rem;
-    font-weight: 700;
-    color: #ffd700;
-    text-shadow: 0 0 30px rgba(255,215,0,0.4), 0 4px 8px rgba(0,0,0,0.3);
-    line-height: 1.1;
-    margin: 0 0 0.3rem;
-  }
-  .title span {
-    font-size: 2.2rem;
-    display: block;
-  }
-  .subtitle {
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
-    font-size: 1rem;
-    margin-bottom: 2.5rem;
-    letter-spacing: 1px;
-  }
-  .multi-setup {
-    margin-bottom: 1.5rem;
-    animation: fadeIn 0.3s ease;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .num-select, .round-select {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.8rem;
-    margin-bottom: 1rem;
-    color: rgba(255,255,255,0.7);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-  }
-  .round-select {
-    margin-bottom: 1.5rem;
-  }
-  .seed-select {
+    max-width: 520px;
+    padding: 3rem 2rem 2rem;
+    margin-left: 7%;
     display: flex;
     flex-direction: column;
+    gap: 1.8rem;
+    text-align: left;
+  }
+
+  /* --- Wordmark --- */
+  .brand-row {
+    display: flex;
     align-items: center;
-    gap: 0.3rem;
-    margin-bottom: 1.5rem;
+    gap: 14px;
   }
-  .seed-select > span {
-    color: rgba(255,255,255,0.7);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
+  .tagline {
+    font-family: var(--font-ui);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--text-dim);
   }
-  .seed-btns {
+  .title {
+    font-family: var(--font-display);
+    font-size: 3.4rem;
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1.02;
+    margin: -0.6rem 0 0;
+    text-transform: uppercase;
+  }
+  .title span {
+    color: var(--amber);
+  }
+  .subtitle {
+    color: rgba(244,242,255,0.6);
+    font-family: var(--font-ui);
+    font-size: 1.02rem;
+    margin: -1rem 0 0;
+  }
+
+  /* --- Menu principale --- */
+  .menu {
     display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .play-btn-wrapper {
+    position: relative;
+  }
+  .cta-primary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 64px;
+    padding: 0 26px;
+    border: none;
+    border-radius: var(--radius-lg);
+    background: var(--amber);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 10px 34px rgba(245,182,63,0.35);
+  }
+  .cta-primary:hover:not(:disabled) {
+    background: var(--amber-bright);
+    transform: translateY(-2px);
+  }
+  .cta-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .menu-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    min-height: 62px;
+    padding: 0.7rem 1.3rem;
+    border-radius: var(--radius-lg);
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    cursor: pointer;
+    transition: all 0.25s;
+    text-align: left;
+    color: var(--text);
+  }
+  .menu-row:hover {
+    background: rgba(244,242,255,0.08);
+    border-color: rgba(244,242,255,0.2);
+  }
+  .menu-icon {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .icon-violet { color: var(--violet); }
+  .icon-mint { color: var(--mint); }
+  .menu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+  }
+  .menu-title {
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .menu-sub {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: rgba(244,242,255,0.5);
+  }
+  .chevron {
+    color: rgba(244,242,255,0.4);
+    flex-shrink: 0;
+  }
+  .streak-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--amber);
+    flex-shrink: 0;
+  }
+
+  /* --- Opzioni compatte (chip) --- */
+  .opts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .opt-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex-wrap: wrap;
-    gap: 0.4rem;
-    justify-content: center;
-    margin-top: 0.2rem;
   }
-  .seed-btn {
-    padding: 0.35rem 0.9rem;
-    border-radius: 8px;
-    border: 2px solid rgba(255,215,0,0.3);
-    background: rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.6);
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
+  .opt-label {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
     font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    width: 76px;
+    flex-shrink: 0;
+  }
+  .chip {
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: rgba(244,242,255,0.6);
+    border: 1.5px solid var(--glass-border-strong);
+    background: transparent;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .seed-btn.active {
-    background: rgba(255,215,0,0.2);
-    color: #ffd700;
-    border-color: #ffd700;
+  .chip.active {
+    color: var(--amber);
+    font-weight: 700;
+    border-color: rgba(245,182,63,0.6);
+    background: rgba(245,182,63,0.08);
   }
-  .seed-btn:hover:not(.active) {
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.85);
+  .chip:hover:not(.active) {
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
   }
-  .seed-desc {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.65);
-    margin: 0;
-    text-align: center;
-    min-height: 1.1em;
-    padding: 0 0.5rem;
-  }
-  .num-btns {
+  .round-chip {
+    width: 36px;
+    height: 34px;
+    border-radius: 12px;
     display: flex;
-    gap: 0.4rem;
-  }
-  .num-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    border: 2px solid rgba(255,215,0,0.3);
-    background: rgba(255,255,255,0.05);
-    color: rgba(255,255,255,0.6);
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
     font-weight: 600;
+    color: rgba(244,242,255,0.6);
+    border: 1.5px solid var(--glass-border-strong);
+    background: transparent;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .num-btn.active {
-    background: rgba(255,215,0,0.2);
-    color: #ffd700;
-    border-color: #ffd700;
+  .round-chip.active {
+    color: var(--amber);
+    font-weight: 700;
+    border-color: rgba(245,182,63,0.6);
+    background: rgba(245,182,63,0.08);
+  }
+
+  /* --- Sezione multiplayer --- */
+  .section-view {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+  .back-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    color: rgba(244,242,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .back-icon:hover:not(:disabled) {
+    background: rgba(244,242,255,0.1);
+    color: var(--text);
+  }
+  .back-icon:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text);
+    margin: 0;
+  }
+  .mode-toggle {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding: 1.2rem;
+    border-radius: var(--radius-lg);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
   }
   .name-inputs {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    margin-bottom: 1rem;
   }
   .name-inputs input {
-    padding: 0.7rem 1rem;
-    border: 2px solid rgba(255,215,0,0.2);
-    border-radius: 8px;
-    background: rgba(255,255,255,0.07);
-    color: #fff;
-    font-family: 'Inter', sans-serif;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 12px;
+    background: rgba(244,242,255,0.05);
+    color: var(--text);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     transition: border-color 0.2s;
   }
   .name-inputs input::placeholder {
-    color: rgba(255,255,255,0.3);
+    color: rgba(244,242,255,0.3);
   }
   .name-inputs input:focus {
-    border-color: rgba(255,215,0,0.5);
+    border-color: rgba(245,182,63,0.5);
     outline: none;
   }
-  .play-btn {
-    padding: 1rem 4rem;
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
-    border: none;
-    border-radius: 12px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.5rem;
-    font-weight: 700;
-    cursor: pointer;
-    letter-spacing: 3px;
-    transition: all 0.25s;
-    box-shadow: 0 4px 20px rgba(255,215,0,0.3);
-  }
-  .play-btn:hover:not(:disabled) {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 6px 28px rgba(255,215,0,0.4);
-  }
-  .play-btn:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
 
-  /* Online styles */
+  /* --- Online --- */
   .online-error {
-    background: rgba(255,82,82,0.12);
-    border: 1px solid rgba(255,82,82,0.35);
-    color: #ff5252;
-    font-family: 'Inter', sans-serif;
+    background: rgba(255,93,115,0.1);
+    border: 1px solid rgba(255,93,115,0.35);
+    color: var(--coral);
+    font-family: var(--font-ui);
+    font-weight: 600;
     font-size: 0.85rem;
     padding: 0.6rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    border-radius: 10px;
     text-align: center;
-  }
-  .online-setup {
-    animation: fadeIn 0.3s ease;
   }
   .online-actions {
     display: flex;
     gap: 0.8rem;
-    margin-bottom: 1rem;
   }
   .online-btn {
     flex: 1;
-    padding: 0.9rem 1.2rem;
-    border: 2px solid rgba(255,215,0,0.3);
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 600;
+    padding: 0.85rem 1.2rem;
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.25s;
+    border: none;
   }
   .online-btn.create {
-    background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,215,0,0.1));
-    color: #ffd700;
-    border-color: rgba(255,215,0,0.4);
+    background: var(--amber);
+    color: var(--ink);
   }
   .online-btn.create:hover {
-    background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,215,0,0.15));
+    background: var(--amber-bright);
   }
   .online-btn.join {
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.8);
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    color: rgba(244,242,255,0.85);
   }
   .online-btn.join:hover:not(:disabled) {
-    background: rgba(255,255,255,0.12);
+    background: rgba(244,242,255,0.1);
   }
   .online-btn:disabled {
     opacity: 0.4;
@@ -740,91 +813,94 @@
   }
   .code-input {
     text-transform: uppercase;
-    font-family: 'Oswald', sans-serif !important;
-    font-size: 1.2rem !important;
+    font-family: var(--font-display) !important;
+    font-size: 1.05rem !important;
     letter-spacing: 3px;
     text-align: center;
+    min-width: 0;
+    flex: 1;
   }
   .back-btn {
     display: block;
-    margin: 0.8rem auto 0;
+    margin: 0 auto;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.4);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
     font-size: 0.85rem;
     cursor: pointer;
     text-decoration: underline;
     transition: color 0.2s;
   }
   .back-btn:hover {
-    color: rgba(255,255,255,0.7);
+    color: var(--text-dim);
   }
 
-  /* Lobby */
+  /* --- Lobby --- */
   .lobby {
-    animation: fadeIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
   }
   .room-code-display {
-    margin-bottom: 1.2rem;
+    padding: 1.1rem 1.2rem;
+    border-radius: var(--radius-lg);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    text-align: center;
   }
   .room-label {
     display: block;
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
     margin-bottom: 0.3rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
   }
   .room-code-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.6rem;
+    gap: 0.8rem;
   }
   .room-code {
-    font-family: 'Oswald', sans-serif;
-    font-size: 2.5rem;
+    font-family: var(--font-display);
+    font-size: 2.1rem;
     font-weight: 700;
-    color: #ffd700;
+    color: var(--amber);
     letter-spacing: 6px;
-    text-shadow: 0 0 20px rgba(255,215,0,0.3);
+    user-select: all;
   }
   .copy-btn {
-    background: rgba(255,215,0,0.15);
-    border: 1px solid rgba(255,215,0,0.3);
-    color: #ffd700;
-    padding: 0.3rem 0.8rem;
-    border-radius: 6px;
-    font-family: 'Inter', sans-serif;
+    background: rgba(245,182,63,0.1);
+    border: 1px solid rgba(245,182,63,0.35);
+    color: var(--amber);
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    font-family: var(--font-ui);
     font-size: 0.8rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
   }
   .copy-btn:hover {
-    background: rgba(255,215,0,0.25);
-  }
-  .copied-toast {
-    display: block;
-    margin-top: 0.4rem;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.78rem;
-    color: #4CAF50;
-    animation: fadeIn 0.3s ease;
+    background: rgba(245,182,63,0.2);
   }
 
   .players-lobby {
-    margin-bottom: 1.2rem;
+    text-align: left;
   }
   .lobby-label {
     display: block;
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
     margin-bottom: 0.5rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
   }
   .player-list {
     list-style: none;
@@ -838,62 +914,54 @@
     display: flex;
     align-items: center;
     gap: 0.6rem;
-    padding: 0.5rem 0.8rem;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     transition: all 0.2s;
   }
   .player-item.is-host {
-    border-color: rgba(255,215,0,0.3);
-    background: rgba(255,215,0,0.05);
+    border-color: rgba(245,182,63,0.35);
+    background: rgba(245,182,63,0.05);
   }
   .player-avatar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
+    background: var(--amber);
+    color: var(--ink);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Oswald', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     flex-shrink: 0;
   }
   .player-name {
-    color: rgba(255,255,255,0.9);
-    font-family: 'Inter', sans-serif;
+    color: var(--text);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     flex: 1;
     text-align: left;
   }
   .host-badge {
-    background: rgba(255,215,0,0.2);
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    letter-spacing: 1px;
+    color: var(--amber);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
   }
   .you-badge {
-    background: rgba(76,175,80,0.2);
-    color: #4CAF50;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    letter-spacing: 1px;
+    color: var(--mint);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
   }
   .waiting-msg {
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-dim);
+    font-family: var(--font-ui);
     font-size: 0.9rem;
-    margin: 1rem 0;
+    text-align: center;
     animation: pulse 2s ease-in-out infinite;
   }
   @keyframes pulse {
@@ -901,172 +969,86 @@
     50% { opacity: 1; }
   }
 
+  /* --- Footer --- */
   .footer {
-    margin-top: 2rem;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
+    gap: 1.4rem;
+    flex-wrap: wrap;
   }
   .footer-link {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.4);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
+    color: rgba(244,242,255,0.35);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
     cursor: pointer;
-    text-decoration: underline;
+    padding: 0;
     transition: color 0.2s;
   }
   .footer-link:hover {
-    color: rgba(255,215,0,0.8);
-  }
-  .footer-sep {
-    color: rgba(255,255,255,0.2);
-    font-size: 0.85rem;
+    color: var(--amber);
   }
 
-  /* Daily button */
-  .daily-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-    width: 100%;
-    padding: 0.9rem 1.2rem;
-    background: linear-gradient(135deg, rgba(255,152,0,0.2), rgba(255,193,7,0.12));
-    border: 2px solid rgba(255,152,0,0.5);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.25s;
-    margin-bottom: 1.5rem;
-    position: relative;
-    overflow: hidden;
+  /* --- Responsive --- */
+  @media (max-width: 1020px) {
+    /* la ruota passa sotto al menu, tagliata a meta' dal bordo inferiore */
+    .start-screen {
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+    }
+    .hero {
+      position: relative;
+      order: 2;
+      width: 100%;
+      height: calc(var(--hero-size, 460px) * 0.66);
+      margin-top: 1.2rem;
+    }
+    .hero-glow {
+      left: 50%;
+      right: auto;
+      top: 0;
+      transform: translateX(-50%);
+    }
+    .hero-wheel {
+      right: auto;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%) rotate(-14deg);
+      width: var(--hero-size, 460px);
+      height: var(--hero-size, 460px);
+    }
+    .content {
+      margin-left: 0;
+      text-align: center;
+      align-items: center;
+    }
+    .brand-row {
+      justify-content: center;
+    }
+    .opt-row {
+      justify-content: center;
+    }
+    .opt-label {
+      width: auto;
+    }
+    .menu,
+    .opts,
+    .section-view {
+      width: 100%;
+    }
+    .menu-row {
+      text-align: left;
+    }
+    .footer {
+      justify-content: center;
+    }
   }
-  .daily-btn::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(255,193,7,0.08), transparent);
-    animation: dailyShimmer 3s ease-in-out infinite;
-  }
-  @keyframes dailyShimmer {
-    0%, 100% { transform: translateX(-100%); }
-    50% { transform: translateX(100%); }
-  }
-  .daily-btn:hover {
-    background: linear-gradient(135deg, rgba(255,152,0,0.3), rgba(255,193,7,0.2));
-    border-color: rgba(255,152,0,0.7);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(255,152,0,0.2);
-  }
-  .daily-icon {
-    font-size: 1.3rem;
-    position: relative;
-  }
-  .daily-text {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #ffb300;
-    letter-spacing: 2px;
-    position: relative;
-  }
-  .streak-badge {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #ff6d00;
-    background: rgba(255,109,0,0.15);
-    padding: 0.15rem 0.5rem;
-    border-radius: 8px;
-    border: 1px solid rgba(255,109,0,0.3);
-    position: relative;
-  }
-
-  /* Hero play button */
-  .play-btn-hero {
-    width: 100%;
-    padding: 1.2rem;
-    font-size: 1.8rem;
-    letter-spacing: 6px;
-    margin-bottom: 1rem;
-  }
-
-  /* Options toggle */
-  .options-toggle {
-    display: block;
-    width: 100%;
-    background: none;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    padding: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 1rem;
-  }
-  .options-toggle:hover {
-    color: rgba(255,255,255,0.7);
-    border-color: rgba(255,215,0,0.3);
-  }
-  .options-panel {
-    margin-bottom: 1rem;
-  }
-
-  /* Secondary action buttons */
-  .secondary-actions {
-    display: flex;
-    gap: 0.6rem;
-    margin-bottom: 1rem;
-  }
-  .secondary-btn {
-    flex: 1;
-    padding: 0.75rem 0.8rem;
-    background: rgba(255,255,255,0.06);
-    border: 1.5px solid rgba(255,255,255,0.15);
-    border-radius: 10px;
-    color: rgba(255,255,255,0.6);
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.25s;
-  }
-  .secondary-btn:hover {
-    background: rgba(255,215,0,0.1);
-    border-color: rgba(255,215,0,0.3);
-    color: #ffd700;
-  }
-  /* Section views (multi / online) */
-  .section-view {
-    text-align: center;
-  }
-  .section-title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: #ffd700;
-    letter-spacing: 2px;
-    margin: 0 0 1.5rem;
-    text-transform: uppercase;
-  }
-  .section-options {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
   @media (max-width: 480px) {
-    .title { font-size: 2.2rem; }
-    .title span { font-size: 1.6rem; }
-    .play-btn { padding: 0.8rem 2.5rem; font-size: 1.2rem; }
-    .play-btn-hero { padding: 1rem; font-size: 1.5rem; }
-    .room-code { font-size: 2rem; }
+    .title { font-size: 2.4rem; }
+    .tagline { letter-spacing: 2px; font-size: 0.7rem; }
+    .content { padding: 2.5rem 1.2rem 1.5rem; }
     .online-actions { flex-direction: column; }
   }
 </style>

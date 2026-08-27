@@ -3,29 +3,40 @@
 </script>
 
 <div class="banner">
-  <span class="label">Categoria:</span>
+  <span class="label">Argomento della frase</span>
   <span class="value">{category}</span>
 </div>
 
 <style>
   .banner {
-    text-align: center;
-    padding: 0.5rem 1.5rem;
-    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05));
-    border: 1px solid rgba(255,215,0,0.3);
-    border-radius: 8px;
-    font-family: 'Oswald', sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
   }
   .label {
-    color: rgba(255,255,255,0.6);
-    font-size: 0.85rem;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    color: var(--text-faint);
+    white-space: nowrap;
   }
   .value {
-    color: #ffd700;
-    font-size: 1.3rem;
-    font-weight: 600;
-    margin-left: 0.5rem;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.28rem;
+    line-height: 1.15;
+    color: var(--amber);
+  }
+  @media (max-width: 860px) {
+    .banner {
+      align-items: center;
+      text-align: center;
+    }
+    .value {
+      font-size: 1.05rem;
+    }
   }
 </style>

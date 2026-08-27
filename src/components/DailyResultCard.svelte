@@ -1,6 +1,8 @@
 <script>
+  import Icon from './Icon.svelte';
   import { fly, scale } from 'svelte/transition';
   import { isLetter, normalizeChar } from '../lib/utils/italian.js';
+  import { shareOrCopy } from '../lib/utils/share.js';
 
   let {
     result = null,
@@ -10,7 +12,9 @@
     onClose = () => {},
   } = $props();
 
-  let shared = $state(false);
+  let shareFeedback = $state('');
+  let canShare = $derived(typeof navigator !== 'undefined' && !!navigator.share);
+  let isWin = $derived(result?.won !== false);
 
   // Build phrase tiles: each char becomes {char, revealed, isLetter, isSpace}
   let phraseTiles = $derived.by(() => {
@@ -54,11 +58,10 @@
   });
 
   async function handleShare() {
-    try {
-      await navigator.clipboard.writeText(shareText);
-    } catch {}
-    shared = true;
-    setTimeout(() => { shared = false; }, 2500);
+    const result = await shareOrCopy(shareText);
+    if (result === 'cancelled') return;
+    shareFeedback = result === 'shared' ? 'Condiviso!' : 'Copiato!';
+    setTimeout(() => { shareFeedback = ''; }, 2500);
   }
 </script>
 
@@ -81,21 +84,31 @@
 
 {#snippet content()}
   <div class="daily-header">
-    <span class="daily-label">FRASE DEL GIORNO</span>
-    <span class="daily-number">#{result.dailyNumber}</span>
+    <span class="daily-label" class:loss={!isWin}>FRASE DEL GIORNO</span>
+    <span class="daily-number" class:loss={!isWin}>#{result.dailyNumber}</span>
   </div>
 
+  {#if !isWin}
+    <div class="loss-banner">Non hai indovinato!</div>
+  {/if}
+
   <!-- Phrase preview grid -->
-  <div class="phrase-preview">
+  <div class="phrase-preview" class:loss={!isWin}>
     {#each words as word, wi}
       <div class="preview-word">
         {#each word as tile}
           {#if tile.type === 'letter'}
-            <div class="mini-tile" class:revealed={tile.revealed} class:hidden={!tile.revealed}>
-              {#if tile.revealed}
+            {#if isWin}
+              <div class="mini-tile" class:revealed={tile.revealed} class:hidden={!tile.revealed}>
+                {#if tile.revealed}
+                  <span>{tile.char}</span>
+                {/if}
+              </div>
+            {:else}
+              <div class="mini-tile" class:revealed-loss={tile.revealed} class:hidden-loss={!tile.revealed}>
                 <span>{tile.char}</span>
-              {/if}
-            </div>
+              </div>
+            {/if}
           {:else}
             <span class="mini-punct">{tile.char}</span>
           {/if}
@@ -107,30 +120,43 @@
     {/each}
   </div>
 
-  <div class="stats-row">
-    <div class="stat-box">
-      <span class="stat-icon">📂</span>
-      <span class="stat-value">{result.category}</span>
+  {#if isWin}
+    <div class="stats-row">
+      <div class="stat-box">
+        <span class="stat-icon"><Icon name="category" size={16} /></span>
+        <span class="stat-value">{result.category}</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon"><Icon name="money" size={16} /></span>
+        <span class="stat-value score">{result.score.toLocaleString('it-IT')}€</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon"><Icon name="letters" size={16} /></span>
+        <span class="stat-value">{result.revealedCount}/{result.totalCount} lettere</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon icon-streak"><Icon name="streak" size={16} /></span>
+        <span class="stat-value streak">{streak} {streak === 1 ? 'giorno' : 'giorni'}</span>
+      </div>
     </div>
-    <div class="stat-box">
-      <span class="stat-icon">💰</span>
-      <span class="stat-value score">{result.score.toLocaleString('it-IT')}€</span>
+  {:else}
+    <div class="stats-row">
+      <div class="stat-box">
+        <span class="stat-icon"><Icon name="category" size={16} /></span>
+        <span class="stat-value">{result.category}</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-icon"><Icon name="letters" size={16} /></span>
+        <span class="stat-value">{result.revealedCount}/{result.totalCount} lettere scoperte</span>
+      </div>
     </div>
-    <div class="stat-box">
-      <span class="stat-icon">🔤</span>
-      <span class="stat-value">{result.revealedCount}/{result.totalCount} lettere</span>
-    </div>
-    <div class="stat-box">
-      <span class="stat-icon">🔥</span>
-      <span class="stat-value streak">{streak} {streak === 1 ? 'giorno' : 'giorni'}</span>
-    </div>
-  </div>
+  {/if}
 
-  <button class="btn-share" onclick={handleShare}>
-    {#if shared}
-      Copiato!
+  <button class="btn-share" class:loss={!isWin} onclick={handleShare}>
+    {#if shareFeedback}
+      {shareFeedback}
     {:else}
-      CONDIVIDI
+      {canShare ? 'CONDIVIDI' : 'COPIA'}
     {/if}
   </button>
 
@@ -141,7 +167,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -154,14 +180,13 @@
     max-width: 380px;
     width: 100%;
     padding: 1.5rem 1.2rem;
-    background: linear-gradient(135deg, rgba(26,35,126,0.95), rgba(13,27,74,0.98));
-    border: 2px solid rgba(255,215,0,0.3);
-    border-radius: 16px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.4), 0 0 30px rgba(255,215,0,0.1);
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
   }
   .card-inline {
     margin: 1rem auto;
-    border-color: rgba(255,215,0,0.25);
   }
   .daily-header {
     display: flex;
@@ -171,20 +196,33 @@
     margin-bottom: 1rem;
   }
   .daily-label {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
     font-weight: 700;
-    color: #ffd700;
-    letter-spacing: 2px;
+    color: var(--amber);
+    letter-spacing: 1.5px;
+  }
+  .daily-label.loss {
+    color: var(--coral);
   }
   .daily-number {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.9rem;
-    color: rgba(255,215,0,0.6);
-    background: rgba(255,215,0,0.1);
-    padding: 0.15rem 0.6rem;
-    border-radius: 12px;
-    border: 1px solid rgba(255,215,0,0.2);
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(245,182,63,0.75);
+  }
+  .daily-number.loss {
+    color: rgba(255,93,115,0.7);
+    background: rgba(255,93,115,0.08);
+    border-color: rgba(255,93,115,0.25);
+  }
+  .loss-banner {
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--coral);
+    letter-spacing: 0.5px;
+    margin-bottom: 0.8rem;
   }
 
   /* Phrase preview grid */
@@ -195,10 +233,13 @@
     align-items: center;
     gap: 3px;
     padding: 0.8rem 0.5rem;
-    background: rgba(0,0,0,0.25);
-    border-radius: 10px;
-    border: 1px solid rgba(255,215,0,0.15);
+    background: var(--glass);
+    border-radius: 12px;
+    border: 1px solid var(--glass-border);
     margin-bottom: 1rem;
+  }
+  .phrase-preview.loss {
+    border-color: rgba(255,93,115,0.25);
   }
   .preview-word {
     display: flex;
@@ -210,27 +251,35 @@
   .mini-tile {
     width: 20px;
     height: 24px;
-    border-radius: 3px;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.65rem;
+    font-family: var(--font-display);
+    font-size: 0.58rem;
     font-weight: 700;
     transition: all 0.2s;
   }
   .mini-tile.revealed {
-    background: rgba(227,242,253,0.9);
-    color: #1a237e;
-    border: 1px solid rgba(255,215,0,0.5);
-    box-shadow: 0 0 4px rgba(255,215,0,0.2);
+    background: var(--tile-revealed);
+    color: var(--tile-letter);
   }
   .mini-tile.hidden {
-    background: rgba(13,71,161,0.6);
-    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(244,242,255,0.06);
+    border: 1px solid rgba(244,242,255,0.12);
+  }
+  .mini-tile.revealed-loss {
+    background: rgba(255,93,115,0.15);
+    color: rgba(244,242,255,0.75);
+    border: 1px solid rgba(255,93,115,0.35);
+  }
+  .mini-tile.hidden-loss {
+    background: rgba(255,93,115,0.05);
+    color: rgba(244,242,255,0.4);
+    border: 1px solid rgba(255,93,115,0.2);
   }
   .mini-punct {
-    color: rgba(255,255,255,0.5);
+    color: var(--text-dim);
     font-size: 0.6rem;
     display: flex;
     align-items: center;
@@ -247,49 +296,64 @@
     display: flex;
     align-items: center;
     gap: 0.7rem;
-    padding: 0.4rem 0.7rem;
-    background: rgba(255,255,255,0.04);
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.06);
+    padding: 0.45rem 0.7rem;
+    background: var(--glass);
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
   }
   .stat-icon {
-    font-size: 1.1rem;
+    display: flex;
     flex-shrink: 0;
+    color: var(--text-faint);
+  }
+  .stat-icon.icon-streak {
+    color: var(--amber);
   }
   .stat-value {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    color: rgba(255,255,255,0.85);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: rgba(244,242,255,0.85);
   }
   .stat-value.score {
-    color: #ffd700;
-    font-size: 1.2rem;
+    font-family: var(--font-display);
+    color: var(--amber);
+    font-size: 1.05rem;
     font-weight: 700;
   }
   .stat-value.streak {
-    color: #ff6d00;
-    font-weight: 600;
+    color: var(--amber);
+    font-weight: 700;
   }
   .btn-share {
     display: block;
     width: 100%;
     padding: 0.85rem;
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
+    background: var(--amber);
+    color: var(--ink);
     border: none;
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.15rem;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-size: 0.98rem;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 2px;
-    transition: transform 0.2s, box-shadow 0.2s;
-    box-shadow: 0 4px 16px rgba(255,215,0,0.3);
+    letter-spacing: 1.5px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(245,182,63,0.3);
     margin-bottom: 1rem;
+  }
+  .btn-share.loss {
+    background: rgba(255,93,115,0.15);
+    color: var(--coral);
+    border: 1px solid rgba(255,93,115,0.4);
+    box-shadow: none;
   }
   .btn-share:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(255,215,0,0.4);
+    background: var(--amber-bright);
+  }
+  .btn-share.loss:hover {
+    background: rgba(255,93,115,0.25);
   }
   .btn-share:active {
     transform: scale(0.98);
@@ -297,8 +361,8 @@
   .btn-close {
     background: none;
     border: none;
-    color: rgba(255,255,255,0.4);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
     font-size: 0.85rem;
     cursor: pointer;
     text-decoration: underline;
@@ -306,12 +370,12 @@
     transition: color 0.2s;
   }
   .btn-close:hover {
-    color: rgba(255,255,255,0.7);
+    color: var(--text-dim);
   }
   .daily-footer {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.8rem;
-    color: rgba(255,255,255,0.35);
+    color: var(--text-faint);
     margin: 0;
   }
 
@@ -319,7 +383,7 @@
     .mini-tile {
       width: 16px;
       height: 20px;
-      font-size: 0.55rem;
+      font-size: 0.5rem;
     }
     .preview-space { width: 6px; }
     .phrase-preview { gap: 2px; }

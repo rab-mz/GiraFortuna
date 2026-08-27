@@ -223,7 +223,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.92);
+    background: rgba(10,14,35,0.94);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -307,7 +307,7 @@
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #283593, #1a237e);
+    background: linear-gradient(135deg, #1B2352, #141A3D);
     color: #ffd700;
     display: flex;
     align-items: center;

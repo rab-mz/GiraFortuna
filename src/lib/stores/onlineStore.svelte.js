@@ -26,6 +26,7 @@ function createOnlineStore() {
   let _onPlayerJoined = null;
   let _onPlayerLeft = null;
   let _onDiceRoll = null;
+  let _onTimerSync = null;
 
   // Track pending cleanup timeout so we can cancel it
   let _cleanupTimeout = null;
@@ -135,6 +136,10 @@ function createOnlineStore() {
       if (_onDiceRoll) _onDiceRoll(payload);
     });
 
+    ch.on('broadcast', { event: 'timer_sync' }, ({ payload }) => {
+      if (_onTimerSync) _onTimerSync(payload);
+    });
+
     ch.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         isReady = true;
@@ -165,6 +170,16 @@ function createOnlineStore() {
       type: 'broadcast',
       event: 'game_start',
       payload: gameState,
+    });
+  }
+
+  // Heartbeat del timer: l'host manda i ms rimanenti, i client ricalcolano la deadline
+  function broadcastTimerSync(remainingMs) {
+    if (mode !== 'host' || !channel) return;
+    channel.send({
+      type: 'broadcast',
+      event: 'timer_sync',
+      payload: { remainingMs },
     });
   }
 
@@ -200,6 +215,10 @@ function createOnlineStore() {
 
   function onDiceRoll(callback) {
     _onDiceRoll = callback;
+  }
+
+  function onTimerSync(callback) {
+    _onTimerSync = callback;
   }
 
   function broadcastDiceRoll(playerIndex) {
@@ -259,9 +278,11 @@ function createOnlineStore() {
     joinRoom,
     broadcastState,
     broadcastGameStart,
+    broadcastTimerSync,
     sendAction,
     broadcastDiceRoll,
     onDiceRoll,
+    onTimerSync,
     onStateUpdate,
     onPlayerAction,
     onGameStart,

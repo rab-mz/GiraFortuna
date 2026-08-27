@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Instrument+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; background: #0A0E23; }
+    a { color: #F5B63F; } a:hover { color: #FFC24D; }
+  </style>
+</helmet>
+<div style="width: 880px; height: 640px; background: #0A0E23; color: #F4F2FF; padding: 36px 44px; box-sizing: border-box; display: flex; flex-direction: column; gap: 26px; overflow: hidden;">
+
+  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+    <h2 style="margin: 0; font-family: 'Unbounded', system-ui, sans-serif; font-weight: 700; font-size: 20px;">Favicon e icone</h2>
+    <span style="font-size: 13px; color: rgba(244,242,255,0.45);">Prova a 16px reali nelle tab del browser</span>
+  </div>
+
+  <!-- tab strip scura -->
+  <div style="display: flex; align-items: flex-end; gap: 4px; height: 46px; padding: 8px 14px 0 14px; border-radius: 12px 12px 0 0; background: #202124;">
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 10px 10px 0 0; background: #35363A; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <g transform="rotate(-90 48 48)">
+          <circle cx="48" cy="48" r="28" fill="none" stroke="#F5B63F" stroke-width="14" stroke-dasharray="21.99 21.99"></circle>
+          <circle cx="48" cy="48" r="28" fill="none" stroke="#EDE9FF" stroke-width="14" stroke-dasharray="21.99 21.99" stroke-dashoffset="-21.99"></circle>
+        </g>
+        <circle cx="48" cy="48" r="5" fill="#F5B63F"></circle>
+      </svg>
+      <span style="font-size: 12px; color: #E8EAED; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <path d="M70.98,67.28 A30,30 0 1 1 70.98,28.72" fill="none" stroke="#F5B63F" stroke-width="13" stroke-linecap="round"></path>
+        <line x1="50" y1="48" x2="72" y2="48" stroke="#F5B63F" stroke-width="13" stroke-linecap="round"></line>
+      </svg>
+      <span style="font-size: 12px; color: #9AA0A6; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <path d="M48,48 L48,12 A36,36 0 0 1 71.14,20.42 Z" fill="#F5B63F"></path>
+        <path d="M48,48 L77.49,27.35 A36,36 0 0 1 83.86,51.14 Z" fill="#7C6CFF"></path>
+        <path d="M48,48 L81.83,60.31 A36,36 0 0 1 66,79.18 Z" fill="#33D6B5"></path>
+        <circle cx="48" cy="48" r="6" fill="#F4F2FF"></circle>
+      </svg>
+      <span style="font-size: 12px; color: #9AA0A6; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+  </div>
+
+  <!-- tab strip chiara -->
+  <div style="display: flex; align-items: flex-end; gap: 4px; height: 46px; padding: 8px 14px 0 14px; border-radius: 12px 12px 0 0; background: #DEE1E6;">
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 10px 10px 0 0; background: #FFFFFF; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <g transform="rotate(-90 48 48)">
+          <circle cx="48" cy="48" r="28" fill="none" stroke="#E8A72A" stroke-width="14" stroke-dasharray="21.99 21.99"></circle>
+          <circle cx="48" cy="48" r="28" fill="none" stroke="#141A3D" stroke-width="14" stroke-dasharray="21.99 21.99" stroke-dashoffset="-21.99"></circle>
+        </g>
+        <circle cx="48" cy="48" r="5" fill="#141A3D"></circle>
+      </svg>
+      <span style="font-size: 12px; color: #202124; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <path d="M70.98,67.28 A30,30 0 1 1 70.98,28.72" fill="none" stroke="#E8A72A" stroke-width="13" stroke-linecap="round"></path>
+        <line x1="50" y1="48" x2="72" y2="48" stroke="#E8A72A" stroke-width="13" stroke-linecap="round"></line>
+      </svg>
+      <span style="font-size: 12px; color: #5F6368; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; min-width: 200px;">
+      <svg width="16" height="16" viewBox="0 0 96 96">
+        <path d="M48,48 L48,12 A36,36 0 0 1 71.14,20.42 Z" fill="#E8A72A"></path>
+        <path d="M48,48 L77.49,27.35 A36,36 0 0 1 83.86,51.14 Z" fill="#7C6CFF"></path>
+        <path d="M48,48 L81.83,60.31 A36,36 0 0 1 66,79.18 Z" fill="#33D6B5"></path>
+        <circle cx="48" cy="48" r="6" fill="#141A3D"></circle>
+      </svg>
+      <span style="font-size: 12px; color: #5F6368; white-space: nowrap;">Gira la Fortuna</span>
+    </div>
+  </div>
+
+  <!-- icone app / PWA -->
+  <div style="display: flex; flex-direction: column; gap: 14px;">
+    <span style="font-size: 11px; font-weight: 700; letter-spacing: 3px; color: rgba(244,242,255,0.45);">ICONA PWA / HOME SCREEN · 3 FONDI</span>
+    <div style="display: flex; gap: 26px; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 76px; height: 76px; border-radius: 18px; background: #F5B63F; display: flex; align-items: center; justify-content: center;">
+          <svg width="46" height="46" viewBox="0 0 96 96">
+            <g transform="rotate(-90 48 48)">
+              <circle cx="48" cy="48" r="28" fill="none" stroke="#141A3D" stroke-width="14" stroke-dasharray="21.99 21.99"></circle>
+              <circle cx="48" cy="48" r="28" fill="none" stroke="#FFFDF6" stroke-width="14" stroke-dasharray="21.99 21.99" stroke-dashoffset="-21.99"></circle>
+            </g>
+            <circle cx="48" cy="48" r="5" fill="#141A3D"></circle>
+          </svg>
+        </div>
+        <span style="font-size: 12px; color: rgba(244,242,255,0.6);">Ambra</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 76px; height: 76px; border-radius: 18px; background: #141A3D; display: flex; align-items: center; justify-content: center;">
+          <svg width="46" height="46" viewBox="0 0 96 96">
+            <g transform="rotate(-90 48 48)">
+              <circle cx="48" cy="48" r="28" fill="none" stroke="#F5B63F" stroke-width="14" stroke-dasharray="21.99 21.99"></circle>
+              <circle cx="48" cy="48" r="28" fill="none" stroke="#EDE9FF" stroke-width="14" stroke-dasharray="21.99 21.99" stroke-dashoffset="-21.99"></circle>
+            </g>
+            <circle cx="48" cy="48" r="5" fill="#F5B63F"></circle>
+          </svg>
+        </div>
+        <span style="font-size: 12px; color: rgba(244,242,255,0.6);">Indaco</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 76px; height: 76px; border-radius: 18px; background: #F7F3E8; display: flex; align-items: center; justify-content: center;">
+          <svg width="46" height="46" viewBox="0 0 96 96">
+            <path d="M70.98,67.28 A30,30 0 1 1 70.98,28.72" fill="none" stroke="#E8A72A" stroke-width="11" stroke-linecap="round"></path>
+            <line x1="50" y1="48" x2="72" y2="48" stroke="#E8A72A" stroke-width="11" stroke-linecap="round"></line>
+          </svg>
+        </div>
+        <span style="font-size: 12px; color: rgba(244,242,255,0.6);">Avorio · G</span>
+      </div>
+      <p style="margin: 0; align-self: center; font-size: 13px; line-height: 1.55; color: rgba(244,242,255,0.55); max-width: 330px;">A 16px Spicchi resta il più nitido; la G regge bene ed è la più distintiva; il Ventaglio a quella scala perde i dettagli. Sul tema chiaro l'ambra scende a #E8A72A per il contrasto.</p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

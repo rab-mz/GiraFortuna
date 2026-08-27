@@ -93,7 +93,7 @@ function createDailyStore() {
     return getDailyPhraseForDate(getTodayStr());
   }
 
-  function recordResult({ score, revealedCount, totalCount, phraseText, revealedLetters, jollyPositions }) {
+  function recordResult({ score, revealedCount, totalCount, phraseText, revealedLetters, jollyPositions, won = true }) {
     const today = getTodayStr();
     const phrase = getDailyPhrase();
 
@@ -107,16 +107,21 @@ function createDailyStore() {
       revealedLetters,
       jollyPositions,
       category: phrase.category,
+      won,
     };
     dailyResult = result;
     saveJSON(DAILY_KEY, result);
 
     // Update stats
     stats.gamesPlayed++;
-    stats.gamesWon++;
-    if (score > stats.bestScore) stats.bestScore = score;
+    if (won) {
+      stats.gamesWon++;
+      if (score > stats.bestScore) stats.bestScore = score;
+      stats.currentStreak++;
+    } else {
+      stats.currentStreak = 0;
+    }
 
-    stats.currentStreak++;
     stats.lastPlayedDate = today;
     if (stats.currentStreak > stats.maxStreak) {
       stats.maxStreak = stats.currentStreak;
@@ -152,6 +157,18 @@ function createDailyStore() {
     if (!dailyResult) return '';
     const r = dailyResult;
     const grid = buildEmojiGrid(r.phraseText, r.revealedLetters, r.jollyPositions);
+
+    if (r.won === false) {
+      return [
+        `🎡 Gira la Fortuna #${r.dailyNumber}`,
+        `❌ Non indovinata`,
+        ``,
+        grid,
+        ``,
+        `giralafortuna.it`,
+      ].join('\n');
+    }
+
     return [
       `🎡 Gira la Fortuna #${r.dailyNumber}`,
       `📂 ${r.category}`,

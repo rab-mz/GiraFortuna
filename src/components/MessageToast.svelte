@@ -28,28 +28,27 @@
   .toast {
     position: relative;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(13, 27, 74, 0.95), rgba(26, 35, 126, 0.92));
-    color: #ffd700;
-    padding: 0.65rem 1.8rem;
-    border-radius: 50px;
-    border: 1.5px solid rgba(255, 215, 0, 0.4);
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    background: rgba(20, 26, 61, 0.95);
+    color: var(--amber);
+    padding: 0.7rem 1.6rem;
+    border-radius: 14px;
+    border: 1.5px solid rgba(245, 182, 63, 0.4);
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
     text-align: center;
     white-space: normal;
     backdrop-filter: blur(12px);
     box-shadow:
       0 4px 24px rgba(0, 0, 0, 0.45),
-      0 0 15px rgba(255, 215, 0, 0.1),
+      0 0 15px rgba(245, 182, 63, 0.08),
       inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .text {
     position: relative;
     z-index: 1;
-    text-shadow: 0 1px 6px rgba(255, 215, 0, 0.25);
   }
 
   .glow {
@@ -58,7 +57,7 @@
     left: -100%;
     width: 60%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.08), transparent);
+    background: linear-gradient(90deg, transparent, rgba(245, 182, 63, 0.08), transparent);
     animation: shimmer 2s ease-in-out infinite;
     z-index: 0;
   }
@@ -79,7 +78,6 @@
     .toast {
       font-size: 0.85rem;
       padding: 0.45rem 1.1rem;
-      border-radius: 40px;
     }
   }
 </style>

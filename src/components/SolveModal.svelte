@@ -89,29 +89,30 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px);
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #283593);
-    border: 2px solid #ffd700;
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     padding: 2rem;
-    max-width: 500px;
+    max-width: 520px;
     width: 90%;
     box-shadow: 0 8px 30px rgba(0,0,0,0.5);
   }
   h2 {
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight: 700;
     text-align: center;
-    margin: 0 0 1rem;
-    font-size: 1.5rem;
+    margin: 0 0 1.2rem;
+    font-size: 1.25rem;
   }
 
   /* Phrase preview */
@@ -120,63 +121,63 @@
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 3px;
-    padding: 1rem 0.5rem;
-    background: rgba(0,0,0,0.3);
-    border-radius: 10px;
-    border: 1px solid rgba(255,215,0,0.15);
+    gap: 4px;
+    padding: 1rem 0.6rem;
+    background: var(--glass);
+    border-radius: 14px;
+    border: 1px solid var(--glass-border);
     margin-bottom: 1.2rem;
   }
   .word {
     display: flex;
-    gap: 2px;
+    gap: 3px;
   }
   .word-space {
     width: 10px;
   }
   .tile {
     width: 26px;
-    height: 30px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
+    border-radius: 5px;
+    font-family: var(--font-display);
+    font-size: 0.8rem;
     font-weight: 700;
-    background: #0d47a1;
-    border: 1px solid rgba(255,215,0,0.2);
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-border);
     color: transparent;
   }
   .tile.revealed {
-    background: #e3f2fd;
-    color: #1a237e;
-    border-color: rgba(255,215,0,0.4);
+    background: var(--tile-revealed);
+    color: var(--tile-letter);
+    border-color: transparent;
   }
   .tile.symbol {
     background: transparent;
     border: none;
-    color: rgba(255,255,255,0.4);
+    color: var(--text-faint);
     font-size: 0.8rem;
   }
 
   input {
     width: 100%;
-    padding: 0.8rem;
-    border: 2px solid rgba(255,215,0,0.4);
-    border-radius: 8px;
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    font-family: 'Inter', sans-serif;
-    font-size: 1.1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(245,182,63,0.4);
+    border-radius: 12px;
+    background: rgba(244,242,255,0.05);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 1.05rem;
     box-sizing: border-box;
   }
   input::placeholder {
-    color: rgba(255,255,255,0.4);
+    color: rgba(244,242,255,0.35);
   }
   input:focus {
     outline: none;
-    border-color: #ffd700;
+    border-color: var(--amber);
   }
   .actions {
     display: flex;
@@ -185,21 +186,31 @@
     justify-content: center;
   }
   .btn-confirm, .btn-cancel {
-    padding: 0.6rem 1.5rem;
+    padding: 0.7rem 1.6rem;
     border: none;
-    border-radius: 8px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    border-radius: 14px;
+    font-size: 0.95rem;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
+    transition: all 0.2s;
   }
   .btn-confirm {
-    background: #ffd700;
-    color: #1a237e;
+    background: var(--amber);
+    color: var(--ink);
+    font-family: var(--font-display);
+    letter-spacing: 0.5px;
+  }
+  .btn-confirm:hover {
+    background: var(--amber-bright);
   }
   .btn-cancel {
-    background: rgba(255,255,255,0.15);
-    color: #fff;
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    color: rgba(244,242,255,0.8);
+    font-family: var(--font-ui);
+  }
+  .btn-cancel:hover {
+    background: rgba(244,242,255,0.1);
   }
 
   @media (max-width: 480px) {
@@ -208,8 +219,8 @@
     }
     .tile {
       width: 22px;
-      height: 26px;
-      font-size: 0.75rem;
+      height: 27px;
+      font-size: 0.7rem;
     }
   }
 </style>

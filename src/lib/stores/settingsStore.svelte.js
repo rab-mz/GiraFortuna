@@ -21,6 +21,7 @@ const DEFAULTS = {
   difficulty: 'all',       // 'short' | 'medium' | 'long' | 'all'
   vowelCost: 500,
   enabledCategories: [...ALL_CATEGORIES],
+  wheelTheme: 'mezzanotte', // 'mezzanotte' | 'notte' | 'classica' | 'neon' (wheelThemes.js)
 };
 
 function loadSettings() {
@@ -47,6 +48,7 @@ function createSettingsStore() {
   let difficulty = $state(initial.difficulty);
   let vowelCost = $state(initial.vowelCost);
   let enabledCategories = $state(initial.enabledCategories);
+  let wheelTheme = $state(initial.wheelTheme);
 
   function save() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -55,6 +57,7 @@ function createSettingsStore() {
       difficulty,
       vowelCost,
       enabledCategories,
+      wheelTheme,
     }));
   }
 
@@ -74,6 +77,9 @@ function createSettingsStore() {
     get enabledCategories() { return enabledCategories; },
     set enabledCategories(v) { enabledCategories = v; save(); },
 
+    get wheelTheme() { return wheelTheme; },
+    set wheelTheme(v) { wheelTheme = v; save(); },
+
     toggleCategory(cat) {
       if (enabledCategories.includes(cat)) {
         // Don't allow disabling all
@@ -91,6 +97,7 @@ function createSettingsStore() {
       difficulty = DEFAULTS.difficulty;
       vowelCost = DEFAULTS.vowelCost;
       enabledCategories = [...DEFAULTS.enabledCategories];
+      wheelTheme = DEFAULTS.wheelTheme;
       save();
     },
   };

@@ -1,12 +1,15 @@
 <script>
   import { fly, scale } from 'svelte/transition';
   import DailyResultCard from './DailyResultCard.svelte';
+  import { shareOrCopy } from '../lib/utils/share.js';
 
   let {
     winner = { name: '', money: 0 },
     players = [],
     isMultiplayer = false,
     phrase = '',
+    category = '',
+    song = null,
     currentRound = 1,
     totalRounds = 1,
     totalScores = [],
@@ -21,6 +24,30 @@
     onMenu = () => {},
   } = $props();
 
+  let shareFeedback = $state('');
+  let canShare = $derived(typeof navigator !== 'undefined' && !!navigator.share);
+
+  function buildShareText() {
+    if (isMultiplayer) {
+      const topPlayer = sortedPlayers[0];
+      return `🎡 Gira la Fortuna\n🏆 ${topPlayer.name} vince con ${topPlayer.total.toLocaleString('it-IT')}€!\n\ngiralafortuna.it`;
+    }
+    const score = totalRounds > 1 ? (totalScores[0] || 0) : winner.money;
+    let text = `🎡 Gira la Fortuna\n💰 Ho vinto ${score.toLocaleString('it-IT')}€!`;
+    if (category) {
+      text += `\n🎯 ${category}`;
+    }
+    text += `\n\ngiralafortuna.it`;
+    return text;
+  }
+
+  async function handleShare() {
+    const result = await shareOrCopy(buildShareText());
+    if (result === 'cancelled') return;
+    shareFeedback = result === 'shared' ? 'Condiviso!' : 'Copiato!';
+    setTimeout(() => { shareFeedback = ''; }, 2500);
+  }
+
   let sortedPlayers = $derived(
     [...players].map((p, i) => ({ ...p, total: totalScores[i] || 0 }))
       .sort((a, b) => b.total - a.total)
@@ -32,11 +59,22 @@
 
   // Auto-advance countdown between rounds
   let hasMoreRounds = $derived(!isGameOver && currentRound < totalRounds);
+  // Sul palco dopo il reveal si canta: l'avanzamento automatico a 5 secondi
+  // lo decide il conduttore, non il timer.
+  let autoAdvance = $derived(hasMoreRounds && !song);
   let countdown = $state(5);
   let countdownInterval = null;
 
+  function skipCountdown() {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    onNextRound();
+  }
+
   $effect(() => {
-    if (hasMoreRounds) {
+    if (autoAdvance) {
       countdown = 5;
       countdownInterval = setInterval(() => {
         countdown--;
@@ -64,6 +102,14 @@
       <h1>{isDailyGame ? 'COMPLIMENTI!' : 'FINE DEL GIOCO!'}</h1>
       <p class="phrase">"{phrase}"</p>
 
+      {#if song}
+        <div class="song-card">
+          <span class="song-label">{isMultiplayer ? 'Ora si canta' : 'La canzone era'}</span>
+          <span class="song-title">{phrase}</span>
+          <span class="song-film">dal film {song.film}</span>
+        </div>
+      {/if}
+
       {#if isDailyGame && dailyResult}
         <DailyResultCard
           result={dailyResult}
@@ -84,6 +130,13 @@
             </div>
           {/each}
         </div>
+        <button class="btn-share" onclick={handleShare}>
+          {#if shareFeedback}
+            {shareFeedback}
+          {:else}
+            {canShare ? 'CONDIVIDI' : 'COPIA RISULTATO'}
+          {/if}
+        </button>
         <div class="buttons">
           {#if showActions}
             <button class="btn-play" onclick={onNewGame}>Gioca Ancora</button>
@@ -95,6 +148,13 @@
         {#if totalRounds > 1}
           <p class="prize total-prize final">Totale finale: <strong>{(totalScores[0] || 0).toLocaleString('it-IT')} €</strong></p>
         {/if}
+        <button class="btn-share" onclick={handleShare}>
+          {#if shareFeedback}
+            {shareFeedback}
+          {:else}
+            {canShare ? 'CONDIVIDI' : 'COPIA RISULTATO'}
+          {/if}
+        </button>
         <div class="buttons">
           {#if showActions}
             <button class="btn-play" onclick={onNewGame}>Gioca Ancora</button>
@@ -105,9 +165,17 @@
 
     {:else}
       <!-- Round won -->
-      <div class="round-badge">Round {currentRound} di {totalRounds}</div>
+      <div class="round-badge">{song ? 'Frase' : 'Round'} {currentRound} di {totalRounds}</div>
       <h1>{isMultiplayer ? `${winner.name} HA VINTO!` : 'HAI VINTO!'}</h1>
       <p class="phrase">"{phrase}"</p>
+
+      {#if song}
+        <div class="song-card">
+          <span class="song-label">{isMultiplayer ? 'Ora si canta' : 'La canzone era'}</span>
+          <span class="song-title">{phrase}</span>
+          <span class="song-film">dal film {song.film}</span>
+        </div>
+      {/if}
 
       {#if isMultiplayer}
         <div class="leaderboard">
@@ -134,17 +202,20 @@
         <p class="prize total-prize">Totale accumulato: <strong>{(totalScores[0] || 0).toLocaleString('it-IT')} €</strong></p>
       {/if}
 
-      {#if hasMoreRounds}
+      {#if autoAdvance}
         <div class="countdown-bar">
           <span class="countdown-text">Prossimo round tra <strong>{countdown}</strong>s</span>
           <div class="countdown-track">
             <div class="countdown-fill" style="width: {(countdown / 5) * 100}%"></div>
           </div>
+          {#if showActions}
+            <button class="btn-skip" onclick={skipCountdown}>Avanti</button>
+          {/if}
         </div>
       {:else}
         <div class="buttons">
           {#if showActions}
-            <button class="btn-play" onclick={onNextRound}>Round Successivo</button>
+            <button class="btn-play" onclick={onNextRound}>{song ? 'Frase successiva' : 'Round Successivo'}</button>
           {/if}
           <button class="btn-menu" onclick={onMenu}>Esci</button>
         </div>
@@ -157,63 +228,105 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 300;
     backdrop-filter: blur(8px);
+    padding: 1rem;
   }
   .content {
     text-align: center;
     padding: 2.5rem;
-    max-width: 450px;
-    width: 90%;
+    max-width: 460px;
+    width: 94%;
+    max-height: 92vh;
+    overflow-y: auto;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 12px 50px rgba(0,0,0,0.5);
   }
   .round-badge {
     display: inline-block;
-    padding: 0.3rem 1.2rem;
-    background: rgba(255,215,0,0.15);
-    border: 1px solid rgba(255,215,0,0.3);
-    border-radius: 20px;
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
+    color: var(--amber);
+    font-family: var(--font-ui);
     font-size: 0.9rem;
-    letter-spacing: 1px;
-    margin-bottom: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
   }
+  .song-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: center;
+    padding: 1.1rem 1.4rem;
+    margin: 0 0 1.2rem;
+    border-radius: var(--radius);
+    background: rgba(245,182,63,0.08);
+    border: 1px solid rgba(245,182,63,0.35);
+  }
+  .song-label {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .song-title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    line-height: 1.15;
+    color: var(--amber);
+    text-align: center;
+  }
+  .song-film {
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    color: var(--text-dim);
+  }
+
   h1 {
-    font-family: 'Oswald', sans-serif;
-    font-size: 2.8rem;
-    color: #ffd700;
-    text-shadow: 0 0 30px rgba(255,215,0,0.6);
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: var(--amber);
     margin: 0 0 0.8rem;
-    letter-spacing: 3px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   .phrase {
-    font-family: 'Inter', sans-serif;
-    color: #fff;
-    font-size: 1.2rem;
-    margin-bottom: 1rem;
+    font-family: var(--font-ui);
+    color: var(--text);
+    font-size: 1.1rem;
+    margin-bottom: 1.2rem;
     font-style: italic;
   }
   .prize {
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.4rem;
-    margin-bottom: 1.5rem;
+    color: rgba(244,242,255,0.7);
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    margin-bottom: 1.2rem;
   }
   .prize strong {
-    font-size: 2rem;
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    color: var(--amber);
+    display: block;
+    margin-top: 0.2rem;
   }
   .leaderboard {
     margin: 1rem 0 1.5rem;
     text-align: left;
   }
   .leaderboard h3 {
-    font-family: 'Oswald', sans-serif;
-    color: rgba(255,255,255,0.6);
-    font-size: 0.9rem;
+    font-family: var(--font-ui);
+    color: var(--text-faint);
+    font-size: 0.75rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
     margin-bottom: 0.5rem;
@@ -222,61 +335,64 @@
   .lb-row {
     display: flex;
     align-items: center;
-    padding: 0.5rem 0.8rem;
-    border-radius: 8px;
-    margin-bottom: 0.3rem;
-    background: rgba(255,255,255,0.05);
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    margin-bottom: 0.35rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
   }
   .lb-row.winner {
-    background: rgba(255,215,0,0.12);
-    border: 1px solid rgba(255,215,0,0.3);
+    background: rgba(245,182,63,0.08);
+    border: 1.5px solid rgba(245,182,63,0.55);
   }
   .lb-pos {
-    font-family: 'Oswald', sans-serif;
-    color: rgba(255,255,255,0.4);
+    font-family: var(--font-display);
+    color: var(--text-faint);
     width: 2rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
+    font-weight: 700;
   }
   .lb-row.winner .lb-pos {
-    color: #ffd700;
+    color: var(--amber);
   }
   .lb-name {
     flex: 1;
-    font-family: 'Oswald', sans-serif;
-    color: rgba(255,255,255,0.8);
-    font-size: 1rem;
-  }
-  .lb-row.winner .lb-name {
-    color: #ffd700;
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
+    font-size: 0.95rem;
     font-weight: 600;
   }
+  .lb-row.winner .lb-name {
+    color: var(--text);
+    font-weight: 700;
+  }
   .lb-money {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.1rem;
+    font-family: var(--font-display);
+    color: var(--amber);
+    font-size: 1rem;
     font-weight: 700;
   }
   .lb-money.total-money {
-    color: #4CAF50;
+    color: var(--mint);
   }
   .leaderboard.totals {
     margin-top: 0.5rem;
     padding-top: 0.8rem;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    border-top: 1px solid var(--glass-border);
   }
   .total-prize {
-    color: #4CAF50;
-    font-size: 1.1rem;
+    color: rgba(244,242,255,0.7);
+    font-size: 0.95rem;
   }
   .total-prize strong {
-    font-size: 1.5rem;
-    color: #4CAF50;
+    color: var(--mint);
+    font-size: 1.3rem;
   }
   .total-prize.final {
-    font-size: 1.4rem;
+    font-size: 1rem;
   }
   .total-prize.final strong {
-    font-size: 2rem;
+    font-size: 1.7rem;
   }
   .buttons {
     display: flex;
@@ -285,32 +401,65 @@
     flex-wrap: wrap;
   }
   .btn-play {
-    padding: 0.8rem 2.5rem;
-    background: linear-gradient(135deg, #ffd700, #f0c000);
-    color: #1a237e;
+    padding: 0.85rem 2.2rem;
+    background: var(--amber);
+    color: var(--ink);
     border: none;
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.2rem;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
     text-transform: uppercase;
-    letter-spacing: 2px;
-    transition: transform 0.2s;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    box-shadow: 0 8px 24px rgba(245,182,63,0.3);
   }
-  .btn-play:hover { transform: scale(1.05); }
+  .btn-play:hover {
+    background: var(--amber-bright);
+    transform: scale(1.04);
+  }
   .btn-menu {
-    padding: 0.8rem 2rem;
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.8);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    padding: 0.85rem 1.8rem;
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.92rem;
     cursor: pointer;
     transition: all 0.2s;
   }
-  .btn-menu:hover { background: rgba(255,255,255,0.15); color: #fff; }
+  .btn-menu:hover {
+    background: rgba(244,242,255,0.1);
+    color: var(--text);
+  }
+
+  .btn-share {
+    display: block;
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(245,182,63,0.08);
+    color: var(--amber);
+    border: 1.5px solid rgba(245,182,63,0.45);
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 1.5px;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+  }
+  .btn-share:hover {
+    transform: translateY(-1px);
+    background: rgba(245,182,63,0.15);
+    box-shadow: 0 4px 16px rgba(245,182,63,0.15);
+  }
+  .btn-share:active {
+    transform: scale(0.98);
+  }
 
   /* Countdown between rounds */
   .countdown-bar {
@@ -321,32 +470,51 @@
     gap: 0.5rem;
   }
   .countdown-text {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    color: rgba(255,255,255,0.6);
-    letter-spacing: 0.5px;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    color: var(--text-dim);
   }
   .countdown-text strong {
-    color: #ffd700;
-    font-size: 1.2rem;
+    color: var(--amber);
+    font-family: var(--font-display);
+    font-size: 1.05rem;
   }
   .countdown-track {
     width: 100%;
     max-width: 200px;
     height: 4px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(244,242,255,0.1);
     border-radius: 2px;
     overflow: hidden;
   }
   .countdown-fill {
     height: 100%;
-    background: #ffd700;
+    background: var(--amber);
     border-radius: 2px;
     transition: width 1s linear;
   }
+  .btn-skip {
+    margin-top: 0.4rem;
+    padding: 0.45rem 1.6rem;
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.7);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 12px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-skip:hover {
+    background: rgba(245,182,63,0.1);
+    color: var(--amber);
+    border-color: rgba(245,182,63,0.35);
+  }
 
   @media (max-width: 480px) {
-    h1 { font-size: 2rem; }
+    h1 { font-size: 1.4rem; }
     .content { padding: 1.5rem; }
   }
 </style>

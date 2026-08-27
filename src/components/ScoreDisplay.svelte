@@ -1,16 +1,18 @@
 <script>
+  import { formatEuro } from '../lib/utils/format.js';
+
   let { money = 0, totalScore = 0, showTotal = false } = $props();
 </script>
 
 <div class="score-container">
   <div class="score">
-    <span class="label">Montepremi Round</span>
-    <span class="amount">{money.toLocaleString('it-IT')} €</span>
+    <span class="label">Montepremi round</span>
+    <span class="amount">{formatEuro(money)}</span>
   </div>
   {#if showTotal}
-    <div class="score total">
+    <div class="score">
       <span class="label">Totale</span>
-      <span class="amount total-amount">{totalScore.toLocaleString('it-IT')} €</span>
+      <span class="amount total-amount">{formatEuro(totalScore)}</span>
     </div>
   {/if}
 </div>
@@ -26,32 +28,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.6rem 1.5rem;
-    background: linear-gradient(135deg, #1a237e, #283593);
-    border: 2px solid #ffd700;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(255,215,0,0.2);
-  }
-  .score.total {
-    border-color: #4CAF50;
-    box-shadow: 0 0 20px rgba(76,175,80,0.2);
+    gap: 0.15rem;
+    padding: 0.7rem 1.6rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
   }
   .label {
-    font-family: 'Oswald', sans-serif;
-    color: rgba(255,255,255,0.7);
-    font-size: 0.75rem;
+    font-family: var(--font-ui);
+    color: var(--text-faint);
+    font-size: 0.68rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 2px;
   }
   .amount {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.8rem;
+    font-family: var(--font-display);
+    color: var(--amber);
+    font-size: 1.5rem;
     font-weight: 700;
-    text-shadow: 0 0 10px rgba(255,215,0,0.4);
   }
   .total-amount {
-    color: #4CAF50;
-    text-shadow: 0 0 10px rgba(76,175,80,0.4);
+    color: var(--mint);
   }
 </style>

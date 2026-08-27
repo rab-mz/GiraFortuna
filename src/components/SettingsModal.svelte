@@ -1,6 +1,7 @@
 <script>
   import { fly } from 'svelte/transition';
   import { settings, ALL_CATEGORIES } from '../lib/stores/settingsStore.svelte.js';
+  import { WHEEL_THEME_LIST } from '../lib/logic/wheelThemes.js';
 
   let { open = false, onClose = () => {} } = $props();
 
@@ -35,7 +36,7 @@
 
       <div class="settings-scroll">
         <!-- Sound -->
-        <div class="setting-row">
+        <div class="setting-row switch">
           <div class="setting-label">
             <span class="setting-name">Effetti sonori</span>
           </div>
@@ -49,10 +50,29 @@
           </button>
         </div>
 
+        <!-- Wheel theme -->
+        <div class="setting-row col">
+          <div class="setting-label">
+            <span class="setting-name">Stile ruota</span>
+            <span class="setting-desc">Come viene disegnata la ruota (vale per tutte le modalità)</span>
+          </div>
+          <div class="chip-row">
+            {#each WHEEL_THEME_LIST as t}
+              <button
+                class="chip"
+                class:active={settings.wheelTheme === t.id}
+                onclick={() => { settings.wheelTheme = t.id; }}
+              >
+                {t.label}
+              </button>
+            {/each}
+          </div>
+        </div>
+
         <!-- Difficulty -->
         <div class="setting-row col">
           <div class="setting-label">
-            <span class="setting-name">Difficolta'</span>
+            <span class="setting-name">Difficoltà</span>
             <span class="setting-desc">Lunghezza delle frasi da indovinare</span>
           </div>
           <div class="chip-row">
@@ -144,7 +164,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -153,9 +173,9 @@
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #0d1b4a);
-    border: 2px solid rgba(255,215,0,0.3);
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     padding: 2rem;
     max-width: 460px;
     width: 100%;
@@ -172,7 +192,7 @@
   }
   .settings-scroll::-webkit-scrollbar { width: 5px; }
   .settings-scroll::-webkit-scrollbar-track { background: transparent; }
-  .settings-scroll::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.2); border-radius: 3px; }
+  .settings-scroll::-webkit-scrollbar-thumb { background: rgba(245,182,63,0.25); border-radius: 3px; }
 
   .close-btn {
     position: absolute;
@@ -180,20 +200,21 @@
     right: 1rem;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-faint);
     font-size: 2rem;
     cursor: pointer;
     line-height: 1;
     transition: color 0.2s;
   }
-  .close-btn:hover { color: #fff; }
+  .close-btn:hover { color: var(--text); }
   h2 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.6rem;
+    font-family: var(--font-display);
+    color: var(--text);
+    font-size: 1.3rem;
+    font-weight: 700;
     margin: 0 0 1.2rem;
     text-align: center;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     flex-shrink: 0;
   }
 
@@ -203,7 +224,7 @@
     justify-content: space-between;
     gap: 0.8rem;
     padding: 0.9rem 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid var(--glass-border);
   }
   .setting-row.col {
     flex-direction: column;
@@ -216,14 +237,14 @@
     gap: 0.1rem;
   }
   .setting-name {
-    font-family: 'Oswald', sans-serif;
-    color: rgba(255,255,255,0.9);
-    font-size: 1rem;
-    font-weight: 600;
+    font-family: var(--font-ui);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 700;
   }
   .setting-desc {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.35);
+    font-family: var(--font-ui);
+    color: var(--text-faint);
     font-size: 0.72rem;
   }
 
@@ -232,8 +253,8 @@
     width: 48px;
     height: 26px;
     border-radius: 13px;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
     cursor: pointer;
     position: relative;
     transition: all 0.25s;
@@ -241,8 +262,8 @@
     padding: 0;
   }
   .toggle.active {
-    background: rgba(255,215,0,0.3);
-    border-color: rgba(255,215,0,0.5);
+    background: rgba(245,182,63,0.25);
+    border-color: rgba(245,182,63,0.5);
   }
   .toggle-knob {
     position: absolute;
@@ -251,41 +272,42 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.6);
+    background: rgba(244,242,255,0.6);
     transition: all 0.25s;
   }
   .toggle.active .toggle-knob {
     left: 24px;
-    background: #ffd700;
+    background: var(--amber);
   }
 
-  /* Chip buttons (timer, difficulty, vowel cost) */
+  /* Chip buttons (wheel theme, timer, difficulty, vowel cost) */
   .chip-row {
     display: flex;
-    gap: 0.3rem;
+    gap: 0.35rem;
     flex-shrink: 0;
     flex-wrap: wrap;
   }
   .chip {
-    padding: 0.35rem 0.7rem;
-    border-radius: 6px;
-    border: 1px solid rgba(255,215,0,0.2);
-    background: rgba(255,255,255,0.04);
-    color: rgba(255,255,255,0.45);
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 12px;
+    border: 1.5px solid var(--glass-border-strong);
+    background: transparent;
+    color: rgba(244,242,255,0.6);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
   }
   .chip.active {
-    background: rgba(255,215,0,0.18);
-    color: #ffd700;
-    border-color: rgba(255,215,0,0.6);
+    background: rgba(245,182,63,0.08);
+    color: var(--amber);
+    border-color: rgba(245,182,63,0.6);
+    font-weight: 700;
   }
   .chip:hover:not(.active) {
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.7);
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
   }
 
   /* Category grid */
@@ -295,28 +317,28 @@
     gap: 0.35rem;
   }
   .cat-chip {
-    padding: 0.3rem 0.6rem;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.04);
-    color: rgba(255,255,255,0.4);
-    font-family: 'Inter', sans-serif;
+    padding: 0.35rem 0.7rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--glass-border);
+    background: transparent;
+    color: rgba(244,242,255,0.45);
+    font-family: var(--font-ui);
     font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
   }
   .cat-chip.active {
-    background: rgba(255,215,0,0.12);
-    color: #ffd700;
-    border-color: rgba(255,215,0,0.4);
+    background: rgba(245,182,63,0.08);
+    color: var(--amber);
+    border-color: rgba(245,182,63,0.45);
   }
   .cat-chip:hover:not(.active) {
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.6);
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.7);
   }
   .all-chip {
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .reset-btn {
@@ -324,8 +346,8 @@
     margin: 1.2rem auto 0;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.3);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
     font-size: 0.8rem;
     cursor: pointer;
     text-decoration: underline;
@@ -333,11 +355,28 @@
     flex-shrink: 0;
   }
   .reset-btn:hover {
-    color: rgba(255,255,255,0.6);
+    color: var(--text-dim);
   }
 
-  @media (max-width: 480px) {
-    .modal { padding: 1.5rem; }
-    h2 { font-size: 1.3rem; }
+  /* Su telefono etichetta e opzioni non stanno sulla stessa riga: la descrizione
+     si spezzava parola per parola e i chip finivano stretti. */
+  @media (max-width: 560px) {
+    .modal {
+      padding: 1.25rem 1.1rem;
+      max-height: 90vh;
+    }
+    h2 { font-size: 1.15rem; }
+    .setting-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.55rem;
+    }
+    .setting-row.switch {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .setting-desc { font-size: 0.75rem; }
+    .chip { padding: 0.4rem 0.75rem; font-size: 0.8rem; }
   }
 </style>

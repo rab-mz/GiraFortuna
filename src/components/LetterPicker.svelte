@@ -37,46 +37,54 @@
     text-align: center;
   }
   .hint {
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    color: var(--amber);
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: 1.05rem;
+    margin-bottom: 0.7rem;
   }
   .keys {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 5px;
+    gap: 6px;
     max-width: 520px;
     margin: 0 auto;
   }
   .key {
-    width: 38px;
-    height: 42px;
-    border: 2px solid rgba(255,215,0,0.4);
-    border-radius: 6px;
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 600;
+    width: 40px;
+    height: 46px;
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 10px;
+    background: var(--glass-strong);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
     transition: all 0.2s;
   }
   .key:hover:not(:disabled) {
-    background: rgba(255,215,0,0.3);
-    transform: scale(1.1);
+    background: rgba(245,182,63,0.15);
+    border-color: rgba(245,182,63,0.6);
+    color: var(--amber);
+    transform: scale(1.08);
   }
   .key.vowel {
-    border-color: rgba(255,100,100,0.5);
+    border-color: rgba(124,108,255,0.45);
+  }
+  .key.vowel:hover:not(:disabled) {
+    background: rgba(124,108,255,0.15);
+    border-color: rgba(124,108,255,0.7);
+    color: #A99DFF;
   }
   .key:disabled {
-    opacity: 0.25;
+    opacity: 0.22;
     cursor: not-allowed;
     transform: none;
   }
   .key.used {
-    background: rgba(100,100,100,0.3);
+    background: transparent;
     text-decoration: line-through;
   }
 
@@ -87,7 +95,7 @@
     .key {
       width: 44px;
       height: 44px;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
       min-height: 44px;
       min-width: 44px;
     }

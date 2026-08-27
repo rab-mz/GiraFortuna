@@ -61,7 +61,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -70,9 +70,9 @@
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #283593);
-    border: 2px solid #ffd700;
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     padding: 2rem;
     max-width: 400px;
     width: 90%;
@@ -80,11 +80,11 @@
     text-align: center;
   }
   h2 {
-    color: #ffd700;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.5rem;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
     margin: 0 0 1.2rem;
-    letter-spacing: 1px;
   }
   .info {
     display: flex;
@@ -97,22 +97,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.4rem 0.6rem;
-    background: rgba(255,255,255,0.05);
-    border-radius: 6px;
+    gap: 0.8rem;
+    padding: 0.5rem 0.8rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
   }
   .label {
-    color: rgba(255,255,255,0.5);
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1px;
+    flex-shrink: 0;
   }
   .value {
-    color: rgba(255,255,255,0.9);
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
     font-weight: 600;
+    text-align: right;
   }
   .buttons {
     display: flex;
@@ -121,39 +126,41 @@
   }
   .btn-resume {
     padding: 0.8rem 2rem;
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
+    background: var(--amber);
+    color: var(--ink);
     border: none;
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 1px;
-    transition: transform 0.2s;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
   }
   .btn-resume:hover {
-    transform: scale(1.05);
+    background: var(--amber-bright);
+    transform: scale(1.04);
   }
   .btn-new {
     padding: 0.8rem 1.5rem;
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.8);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
   }
   .btn-new:hover {
-    background: rgba(255,255,255,0.15);
-    color: #fff;
+    background: rgba(244,242,255,0.1);
+    color: var(--text);
   }
 
   @media (max-width: 480px) {
     .modal { padding: 1.5rem; }
-    h2 { font-size: 1.3rem; }
+    h2 { font-size: 1.05rem; }
     .buttons { flex-direction: column; }
   }
 </style>

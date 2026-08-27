@@ -1,0 +1,31 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Rebrand" },
+    { "id": "page-2", "name": "Varianti ruota" },
+    { "id": "page-3", "name": "Logo e social" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Home · desktop", "page": "page-1" },
+    { "file": "Gioco.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Partita · desktop", "page": "page-1" },
+    { "file": "Mobile.dc.html", "x": 0, "y": 1120, "w": 390, "h": 844, "title": "Partita · mobile", "page": "page-1" },
+    { "file": "Brand.dc.html", "x": 520, "y": 1120, "w": 1180, "h": 860, "title": "Brand board", "page": "page-1" },
+    { "file": "DirezioneB.dc.html", "x": 0, "y": 2180, "w": 640, "h": 520, "title": "Alternativa B", "page": "page-1" },
+    { "file": "DirezioneC.dc.html", "x": 760, "y": 2180, "w": 640, "h": 520, "title": "Alternativa C", "page": "page-1" },
+    { "file": "RuotaA.dc.html", "x": 0, "y": 0, "w": 520, "h": 640, "title": "Ruota A · Mezzanotte", "page": "page-2" },
+    { "file": "RuotaB.dc.html", "x": 620, "y": 0, "w": 520, "h": 640, "title": "Ruota B · Notte e ambra", "page": "page-2" },
+    { "file": "RuotaC.dc.html", "x": 1240, "y": 0, "w": 520, "h": 640, "title": "Ruota C · Classica piatta", "page": "page-2" },
+    { "file": "RuotaD.dc.html", "x": 1860, "y": 0, "w": 520, "h": 640, "title": "Ruota D · Neon arcade", "page": "page-2" },
+    { "file": "Loghi.dc.html", "x": 0, "y": 0, "w": 1120, "h": 800, "title": "Idee di marchio", "page": "page-3" },
+    { "file": "Favicon.dc.html", "x": 1240, "y": 0, "w": 880, "h": 640, "title": "Favicon e icone", "page": "page-3" },
+    { "file": "Social.dc.html", "x": 0, "y": 940, "w": 1200, "h": 630, "title": "Social card · og-image", "page": "page-3" }
+  ],
+  "annotations": [
+    { "id": "direzione-scelta", "x": 0, "y": -400, "w": 460, "page": "page-1", "text": "DIREZIONE PROPOSTA · Mezzanotte d'oro\nEvoluzione del brand attuale, non una rottura: resta il gioco notturno navy+oro, ma con palette più ricca (ambra, violetto, menta, corallo), Unbounded al posto di Oswald e superfici in vetro scuro al posto di glow e particelle.\nIn basso due direzioni alternative come schizzi di confronto: Riviera Pop (chiaro) e Neon Arcade (neon)." },
+    { "id": "fix-modalita", "x": 540, "y": -400, "w": 460, "page": "page-1", "text": "SEMPLIFICARE LE MODALITÀ\nOggi: Gioca, Partita rapida, Frase del giorno, Multiplayer locale, Online + 4 varianti ruota (Classica, Jackpot, Rischio, Rapida).\nProposta home: 3 sole voci — Gioca, Frase del giorno, Multiplayer (locale e online unificate). Varianti ruota ridotte a Classica e Jackpot: Rischio (43% di spicchi negativi) e Rapida si eliminano; la scorciatoia \"partita rapida\" diventa Gioca con 1 round." },
+    { "id": "fix-ruota", "x": 1560, "y": -400, "w": 440, "page": "page-1", "text": "FIX RUOTA · meno bancarotta\nOggi l'estrazione è uniforme: 1/14 ≈ 7% di Bancarotta a ogni giro (21% in Rischio) — per questo \"finisce quasi sempre in bancarotta\".\nProposta: estrazione pesata in getWeightedSpinIndex() — Bancarotta ~3%, Passa ~4% ciascuno, il resto ridistribuito sui premi. La grafica della ruota non cambia: cambia solo la probabilità." },
+    { "id": "fix-timer", "x": 2080, "y": -400, "w": 440, "page": "page-1", "text": "FIX TIMER · sincronizzazione\nOggi: setInterval solo client-side, nessun timestamp condiviso → drift tra host e ospiti, timer fermi in tab in background, valori diversi tra giocatori.\nProposta: l'host trasmette una deadline (timestamp) + heartbeat ogni 5 s; i client calcolano il countdown dalla deadline. UI: anello attorno all'avatar del giocatore attivo + numero, corallo pulsante sotto i 10 s — visibile anche su mobile." },
+    { "id": "ruote-nota", "x": 0, "y": -320, "w": 520, "page": "page-2", "text": "VARIANTI RUOTA · REBRAND\nQuattro versioni della ruota di gioco, dalla più fedele alla più spinta. In tutte il mozzo perde la scritta GIRA LA FORTUNA: al suo posto il logo Spicchi, nei colori del mozzo che lo ospita.\nPreferite da Baha: A e B. La A è già aggiornata: etichette sempre chiare (niente nero su 400 e 1000), Jolly in violetto su avorio.\nStruttura e geometria (14 spicchi, puntatore, LED/tacche) restano quelle del gioco JS attuale, quindi qualunque scelta si implementa solo cambiando colori e stile in Wheel.svelte + wheelSegments.js.\nScegli la variante (o un mix) e la porto nelle schermate di gioco della pagina Rebrand." },
+    { "id": "logo-nota", "x": 1240, "y": -300, "w": 460, "page": "page-3", "text": "LOGO SCELTO · SPICCHI\nMarchio ufficiale: 3 · Spicchi, così com'è. Sostituisce la ruota a 8 raggi anche al centro della ruota di gioco, nei colori del mozzo che lo ospita.\nFile reali generati in ruota-della-fortuna/design-rebrand/assets/ con gli stessi nomi di public/: favicon.svg (cambia palette col tema: ambra su scuro, indaco su chiaro), favicon-96x96.png, favicon.ico, icone PWA 192/512 e apple-touch-icon in versione Ambra e Indaco, og-image (jpg+png) renderizzata dalla social card con la Ruota A." }
+  ],
+  "launch": { "view": "canvas", "page": "page-2" }
+}

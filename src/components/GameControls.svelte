@@ -15,36 +15,37 @@
 
 <div class="controls">
   <button class="btn spin" disabled={!canSpin} onclick={onSpin}>
-    Gira la Ruota
+    Gira la ruota
   </button>
-  {#if showBuyVowel}
-    <button class="btn vowel" disabled={!canBuyVowel} onclick={onBuyVowel}>
-      Compra Vocale (-{settings.vowelCost}€)
+  <div class="secondary">
+    {#if showBuyVowel}
+      <button class="btn vowel" disabled={!canBuyVowel} onclick={onBuyVowel}>
+        Vocale −{settings.vowelCost} €
+      </button>
+    {/if}
+    <button class="btn solve" disabled={!canSolve} onclick={onSolve}>
+      Risolvi
     </button>
-  {/if}
-  <button class="btn solve" disabled={!canSolve} onclick={onSolve}>
-    Risolvi
-  </button>
+  </div>
 </div>
 
 <style>
   .controls {
     display: flex;
-    gap: 0.8rem;
-    justify-content: center;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+  }
+  .secondary {
+    display: flex;
+    gap: 12px;
   }
   .btn {
-    padding: 0.7rem 1.4rem;
     border: none;
-    border-radius: 8px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
   }
   .btn:disabled {
     opacity: 0.35;
@@ -53,29 +54,47 @@
   }
   .btn:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   }
   .spin {
-    background: linear-gradient(135deg, #ffd700, #f0c000);
-    color: #1a237e;
+    height: 58px;
+    border-radius: 16px;
+    background: var(--amber);
+    color: var(--ink);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.02rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    box-shadow: 0 10px 30px rgba(245,182,63,0.3);
+  }
+  .spin:hover:not(:disabled) {
+    background: var(--amber-bright);
+  }
+  .vowel,
+  .solve {
+    flex: 1;
+    height: 48px;
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.88rem;
   }
   .vowel {
-    background: linear-gradient(135deg, #4CAF50, #388e3c);
-    color: #fff;
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    color: rgba(244,242,255,0.85);
+  }
+  .vowel:hover:not(:disabled) {
+    background: rgba(244,242,255,0.1);
   }
   .solve {
-    background: linear-gradient(135deg, #2196F3, #1976D2);
-    color: #fff;
+    background: rgba(124,108,255,0.12);
+    border: 1px solid rgba(124,108,255,0.45);
+    color: #A99DFF;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-
-  @media (max-width: 480px) {
-    .controls {
-      flex-direction: column;
-      align-items: stretch;
-    }
-    .btn {
-      padding: 0.9rem 1.4rem;
-      font-size: 1.05rem;
-    }
+  .solve:hover:not(:disabled) {
+    background: rgba(124,108,255,0.2);
   }
 </style>

@@ -21,10 +21,10 @@
         <section>
           <h3>Il turno</h3>
           <ol>
-            <li><strong>Gira la ruota</strong> — trascina la ruota per farla girare</li>
-            <li><strong>Scegli una consonante</strong> — se presente nella frase, guadagni il valore della ruota per ogni occorrenza</li>
-            <li><strong>Compra una vocale</strong> (opzionale) — costa 500€, non fa guadagnare ma rivela le lettere</li>
-            <li><strong>Risolvi</strong> — prova a indovinare l'intera frase quando pensi di conoscerla</li>
+            <li><strong>Gira la ruota</strong>: trascina la ruota per farla girare</li>
+            <li><strong>Scegli una consonante</strong>: se presente nella frase, guadagni il valore della ruota per ogni occorrenza</li>
+            <li><strong>Compra una vocale</strong> (opzionale): costa 500€, non fa guadagnare ma rivela le lettere</li>
+            <li><strong>Risolvi</strong>: prova a indovinare l'intera frase quando pensi di conoscerla</li>
           </ol>
         </section>
 
@@ -55,13 +55,13 @@
           <h3>Modalita di gioco</h3>
           <div class="modes">
             <div class="mode-item">
-              <strong>1 Giocatore</strong> — gioca da solo senza limiti di tempo
+              <strong>1 Giocatore</strong>: gioca da solo senza limiti di tempo
             </div>
             <div class="mode-item">
-              <strong>Locale</strong> — da 2 a 4 giocatori sullo stesso dispositivo, a turni con timer
+              <strong>Locale</strong>: da 2 a 4 giocatori sullo stesso dispositivo, a turni con timer
             </div>
             <div class="mode-item">
-              <strong>Online</strong> — gioca con amici su dispositivi diversi. L'host crea la stanza e condivide il codice
+              <strong>Online</strong>: gioca con amici su dispositivi diversi. L'host crea la stanza e condivide il codice
             </div>
           </div>
         </section>
@@ -71,20 +71,12 @@
           <p>Prima di iniziare puoi scegliere una variante per cambiare il comportamento della ruota:</p>
           <div class="variants">
             <div class="variant-item">
-              <strong class="variant-name">Classico</strong>
+              <strong class="variant-name">Classica</strong>
               <span>Il gioco standard. Premi da 100 a 1000, Passa, Bancarotta e Jolly.</span>
             </div>
             <div class="variant-item">
               <strong class="variant-name">Jackpot</strong>
               <span>Premi altissimi, nessuna Bancarotta. Adatto ai principianti!</span>
-            </div>
-            <div class="variant-item">
-              <strong class="variant-name">Rischio</strong>
-              <span>Molte Bancarotte e Passa. Solo per i coraggiosi!</span>
-            </div>
-            <div class="variant-item">
-              <strong class="variant-name">Maledizione</strong>
-              <span>Ogni Bancarotta raddoppia le probabilita di Bancarotta e Passa per tutti. La ruota diventa sempre piu pericolosa!</span>
             </div>
           </div>
         </section>
@@ -97,7 +89,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -106,9 +98,9 @@
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #0d1b4a);
-    border: 2px solid rgba(255,215,0,0.3);
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     padding: 2rem;
     max-width: 520px;
     width: 100%;
@@ -122,29 +114,32 @@
     right: 1rem;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-faint);
     font-size: 2rem;
     cursor: pointer;
     line-height: 1;
     transition: color 0.2s;
   }
   .close-btn:hover {
-    color: #fff;
+    color: var(--text);
   }
   h2 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.8rem;
+    font-family: var(--font-display);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1.3rem;
     margin: 0 0 1.5rem;
     text-align: center;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
   }
   h3 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.1rem;
+    font-family: var(--font-ui);
+    color: var(--amber);
+    font-size: 0.95rem;
+    font-weight: 700;
     margin: 0 0 0.5rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
   section {
     margin-bottom: 1.5rem;
@@ -153,15 +148,15 @@
     margin-bottom: 0;
   }
   p {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.9rem;
     line-height: 1.5;
     margin: 0;
   }
   ol {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.9rem;
     line-height: 1.6;
     padding-left: 1.2rem;
@@ -171,7 +166,7 @@
     margin-bottom: 0.3rem;
   }
   ol li strong {
-    color: #ffd700;
+    color: var(--amber);
   }
   .specials {
     display: flex;
@@ -182,35 +177,35 @@
     display: flex;
     align-items: center;
     gap: 0.8rem;
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.85rem;
   }
   .special-badge {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.7rem;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
     font-weight: 700;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
     letter-spacing: 1px;
     flex-shrink: 0;
-    min-width: 5rem;
+    min-width: 5.4rem;
     text-align: center;
   }
   .special-badge.passa {
-    background: rgba(255,152,0,0.2);
-    color: #FF9800;
-    border: 1px solid rgba(255,152,0,0.4);
+    background: rgba(124,108,255,0.12);
+    color: #A99DFF;
+    border: 1px solid rgba(124,108,255,0.45);
   }
   .special-badge.bancarotta {
-    background: rgba(244,67,54,0.2);
-    color: #F44336;
-    border: 1px solid rgba(244,67,54,0.4);
+    background: rgba(255,93,115,0.1);
+    color: var(--coral);
+    border: 1px solid rgba(255,93,115,0.4);
   }
   .special-badge.jolly {
-    background: rgba(0,230,118,0.15);
-    color: #00e676;
-    border: 1px solid rgba(0,230,118,0.4);
+    background: rgba(51,214,181,0.1);
+    color: var(--mint);
+    border: 1px solid rgba(51,214,181,0.4);
   }
   .modes {
     display: flex;
@@ -218,16 +213,17 @@
     gap: 0.5rem;
   }
   .mode-item {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.85rem;
-    padding: 0.5rem 0.8rem;
-    background: rgba(255,255,255,0.05);
-    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     line-height: 1.4;
   }
   .mode-item strong {
-    color: #ffd700;
+    color: var(--amber);
   }
   .variants {
     display: flex;
@@ -236,19 +232,20 @@
     margin-top: 0.5rem;
   }
   .variant-item {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.85rem;
-    padding: 0.5rem 0.8rem;
-    background: rgba(255,255,255,0.05);
-    border-radius: 8px;
+    padding: 0.55rem 0.9rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
     line-height: 1.4;
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
   }
   .variant-name {
-    color: #ffd700;
+    color: var(--amber);
   }
 
   /* Scrollbar styling */
@@ -259,7 +256,7 @@
     background: transparent;
   }
   .modal::-webkit-scrollbar-thumb {
-    background: rgba(255,215,0,0.3);
+    background: rgba(245,182,63,0.25);
     border-radius: 3px;
   }
 
@@ -268,7 +265,7 @@
       padding: 1.5rem;
     }
     h2 {
-      font-size: 1.4rem;
+      font-size: 1.15rem;
     }
   }
 </style>

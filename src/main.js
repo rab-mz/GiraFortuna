@@ -1,9 +1,14 @@
 import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
+import './lib/utils/installPrompt.js'
 
 const app = mount(App, {
   target: document.getElementById('app'),
 })
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
 
 export default app

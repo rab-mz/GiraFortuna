@@ -17,7 +17,7 @@
 
         <section>
           <h3>Titolare del trattamento</h3>
-          <p>Gira la Fortuna (girafortuna.it) e' un gioco online gratuito. Per contatti: info@girafortuna.it</p>
+          <p>Gira la Fortuna (giralafortuna.it) e' un gioco online gratuito. Per contatti: info@girafortuna.it</p>
         </section>
 
         <section>
@@ -28,7 +28,7 @@
 
         <section>
           <h3>Cookie</h3>
-          <p>Questo sito utilizza esclusivamente <strong>cookie tecnici</strong> necessari al funzionamento (es. preferenze locali). Non vengono utilizzati cookie di profilazione o di terze parti a scopo pubblicitario.</p>
+          <p>Questo sito utilizza <strong>cookie tecnici</strong> necessari al funzionamento (es. preferenze locali) e, solo con il tuo consenso, <strong>cookie di statistica</strong> per contare visite e partite in forma aggregata. Puoi rifiutarli dal banner: il gioco funziona ugualmente. <strong>Non</strong> vengono utilizzati cookie di profilazione o pubblicitari.</p>
           <p>I cookie tecnici non richiedono il consenso dell'utente ai sensi dell'art. 122 del Codice Privacy e del provvedimento del Garante dell'8 maggio 2014.</p>
         </section>
 
@@ -56,7 +56,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -65,9 +65,9 @@
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #0d1b4a);
-    border: 2px solid rgba(255,215,0,0.3);
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     padding: 2rem;
     max-width: 560px;
     width: 100%;
@@ -81,58 +81,61 @@
     right: 1rem;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-faint);
     font-size: 2rem;
     cursor: pointer;
     line-height: 1;
     transition: color 0.2s;
   }
-  .close-btn:hover { color: #fff; }
+  .close-btn:hover { color: var(--text); }
   h2 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.8rem;
+    font-family: var(--font-display);
+    color: var(--text);
+    font-weight: 700;
+    font-size: 1.3rem;
     margin: 0 0 0.5rem;
     text-align: center;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
   }
   .updated {
     text-align: center;
-    color: rgba(255,255,255,0.4);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-faint);
+    font-family: var(--font-ui);
     font-size: 0.8rem;
     margin-bottom: 1.5rem;
   }
   h3 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1rem;
+    font-family: var(--font-ui);
+    color: var(--amber);
+    font-size: 0.9rem;
+    font-weight: 700;
     margin: 0 0 0.4rem;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
   }
   section {
     margin-bottom: 1.2rem;
   }
   p {
-    font-family: 'Inter', sans-serif;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-ui);
+    color: rgba(244,242,255,0.8);
     font-size: 0.85rem;
     line-height: 1.6;
     margin: 0 0 0.5rem;
   }
-  p strong { color: #fff; }
+  p strong { color: var(--text); }
   a {
-    color: #ffd700;
+    color: var(--amber);
     text-decoration: underline;
   }
-  a:hover { color: #fff; }
+  a:hover { color: var(--amber-bright); }
 
   .modal::-webkit-scrollbar { width: 6px; }
   .modal::-webkit-scrollbar-track { background: transparent; }
-  .modal::-webkit-scrollbar-thumb { background: rgba(255,215,0,0.3); border-radius: 3px; }
+  .modal::-webkit-scrollbar-thumb { background: rgba(245,182,63,0.25); border-radius: 3px; }
 
   @media (max-width: 480px) {
     .modal { padding: 1.5rem; }
-    h2 { font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; }
   }
 </style>

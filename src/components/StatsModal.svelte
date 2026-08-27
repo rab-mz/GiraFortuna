@@ -158,7 +158,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -171,20 +171,20 @@
     max-width: 420px;
     width: 100%;
     padding: 2rem 1.5rem;
-    background: linear-gradient(135deg, rgba(26,35,126,0.95), rgba(13,27,74,0.98));
-    border: 2px solid rgba(255,215,0,0.25);
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
     box-shadow: 0 8px 40px rgba(0,0,0,0.4);
     max-height: 90vh;
     overflow-y: auto;
   }
   h2 {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.6rem;
-    color: #ffd700;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
     margin: 0 0 0.8rem;
-    letter-spacing: 2px;
-    text-shadow: 0 0 15px rgba(255,215,0,0.3);
+    letter-spacing: 1px;
   }
 
   /* Tab bar */
@@ -196,30 +196,31 @@
   }
   .tab {
     padding: 0.5rem 1.5rem;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 8px;
-    color: rgba(255,255,255,0.5);
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
+    background: transparent;
+    border: 1.5px solid var(--glass-border-strong);
+    border-radius: 12px;
+    color: rgba(244,242,255,0.6);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.88rem;
     cursor: pointer;
     transition: all 0.2s;
-    letter-spacing: 1px;
   }
   .tab:hover {
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.7);
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
   }
   .tab.active {
-    background: rgba(255,215,0,0.15);
-    border-color: rgba(255,215,0,0.4);
-    color: #ffd700;
+    background: rgba(245,182,63,0.08);
+    border-color: rgba(245,182,63,0.6);
+    color: var(--amber);
+    font-weight: 700;
   }
 
   .stats-subtitle {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.8rem;
-    color: rgba(255,255,255,0.4);
+    color: var(--text-faint);
     margin: 0 0 1.2rem;
   }
   .stats-row {
@@ -234,23 +235,24 @@
     align-items: center;
     gap: 0.3rem;
     padding: 0.8rem 0.3rem;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 10px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
   }
   .stat-num {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.8rem;
+    font-family: var(--font-display);
+    font-size: 1.4rem;
     font-weight: 700;
-    color: rgba(255,255,255,0.9);
+    color: var(--text);
   }
   .stat-num.highlight {
-    color: #ff6d00;
+    color: var(--amber);
   }
   .stat-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.7rem;
-    color: rgba(255,255,255,0.4);
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -260,21 +262,21 @@
     justify-content: center;
     gap: 0.8rem;
     padding: 0.8rem;
-    background: rgba(255,215,0,0.06);
-    border: 1px solid rgba(255,215,0,0.2);
-    border-radius: 10px;
+    background: rgba(245,182,63,0.06);
+    border: 1px solid rgba(245,182,63,0.25);
+    border-radius: 12px;
     margin-bottom: 1.5rem;
   }
   .best-label {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.5);
+    color: var(--text-dim);
   }
   .best-value {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.5rem;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
     font-weight: 700;
-    color: #ffd700;
+    color: var(--amber);
   }
 
   /* Mode breakdown */
@@ -285,37 +287,39 @@
   .mode-header {
     display: flex;
     padding: 0.4rem 0.6rem;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid var(--glass-border);
     margin-bottom: 0.3rem;
   }
   .mode-header .mode-col {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.65rem;
-    color: rgba(255,255,255,0.35);
+    font-weight: 600;
+    color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   .mode-row {
     display: flex;
     padding: 0.5rem 0.6rem;
-    background: rgba(255,255,255,0.03);
-    border-radius: 6px;
+    background: var(--glass);
+    border-radius: 8px;
     margin-bottom: 0.2rem;
   }
   .mode-row:hover {
-    background: rgba(255,255,255,0.06);
+    background: var(--glass-strong);
   }
   .mode-col {
     flex: 1;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.7);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: rgba(244,242,255,0.7);
     text-align: center;
   }
   .mode-col.name {
     text-align: left;
     flex: 1.2;
-    color: rgba(255,255,255,0.85);
+    color: rgba(244,242,255,0.9);
   }
 
   /* History */
@@ -323,9 +327,10 @@
     margin-bottom: 1.2rem;
   }
   .history-title {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.4);
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-faint);
     text-transform: uppercase;
     letter-spacing: 1.5px;
     margin: 0 0 0.5rem;
@@ -334,35 +339,35 @@
     max-height: 180px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,215,0,0.3) transparent;
+    scrollbar-color: rgba(245,182,63,0.3) transparent;
   }
   .history-row {
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.4rem 0.5rem;
-    background: rgba(255,255,255,0.03);
-    border-radius: 6px;
+    background: var(--glass);
+    border-radius: 8px;
     margin-bottom: 0.2rem;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.75rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(244,242,255,0.6);
   }
   .h-date {
     flex-shrink: 0;
     width: 2.5rem;
-    color: rgba(255,255,255,0.4);
+    color: var(--text-faint);
   }
   .h-mode {
     flex-shrink: 0;
     width: 3.5rem;
     padding: 0.15rem 0.3rem;
-    background: rgba(255,215,0,0.1);
-    border-radius: 4px;
+    background: rgba(245,182,63,0.1);
+    border-radius: 8px;
     text-align: center;
-    font-size: 0.65rem;
-    color: #ffd700;
-    font-weight: 600;
+    font-size: 0.62rem;
+    color: var(--amber);
+    font-weight: 700;
   }
   .h-cat {
     flex: 1;
@@ -372,45 +377,47 @@
   }
   .h-score {
     flex-shrink: 0;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.8);
+    font-family: var(--font-display);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(244,242,255,0.85);
   }
   .h-result {
     flex-shrink: 0;
     width: 1.2rem;
     text-align: center;
     font-size: 0.9rem;
-    color: #ef5350;
+    color: var(--coral);
   }
   .h-result.won {
-    color: #4CAF50;
+    color: var(--mint);
   }
   .empty-history {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.8rem;
-    color: rgba(255,255,255,0.3);
+    color: var(--text-faint);
     margin: 1rem 0;
   }
 
   .btn-close {
     padding: 0.7rem 2.5rem;
-    background: rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.8);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    background: var(--glass-strong);
+    color: rgba(244,242,255,0.8);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.92rem;
     cursor: pointer;
     transition: all 0.2s;
   }
   .btn-close:hover {
-    background: rgba(255,255,255,0.15);
-    color: #fff;
+    background: rgba(244,242,255,0.1);
+    color: var(--text);
   }
 
   @media (max-width: 480px) {
-    .stat-num { font-size: 1.4rem; }
+    .stat-num { font-size: 1.15rem; }
     .modal { padding: 1.5rem 1rem; }
     .history-list { max-height: 150px; }
   }

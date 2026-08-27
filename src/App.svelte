@@ -6,6 +6,8 @@
   import { SEEDS } from './lib/logic/wheelSeeds.js';
   import { isLetter, normalizeChar } from './lib/utils/italian.js';
   import StartScreen from './components/StartScreen.svelte';
+  import EventDemoScreen from './components/EventDemoScreen.svelte';
+  import { EVENT_PHRASES } from './lib/data/eventPhrases.js';
   import Wheel from './components/Wheel.svelte';
   import PuzzleBoard from './components/PuzzleBoard.svelte';
   import CategoryBanner from './components/CategoryBanner.svelte';
@@ -17,12 +19,16 @@
   import MessageToast from './components/MessageToast.svelte';
   import GameOverScreen from './components/GameOverScreen.svelte';
   import CookieBanner from './components/CookieBanner.svelte';
+  import InstallBanner from './components/InstallBanner.svelte';
   import { settings } from './lib/stores/settingsStore.svelte.js';
   import { saveSession, loadSession, loadOnlineSession, clearSession } from './lib/stores/sessionStore.js';
   import ResumeModal from './components/ResumeModal.svelte';
   import ExitConfirmModal from './components/ExitConfirmModal.svelte';
   import MobileGameLayout from './components/MobileGameLayout.svelte';
   import DiceRollScreen from './components/DiceRollScreen.svelte';
+  import Icon from './components/Icon.svelte';
+  import SpicchiLogo from './components/SpicchiLogo.svelte';
+  import { formatEuro } from './lib/utils/format.js';
   import { analytics } from './lib/stores/analyticsStore.js';
   import { generalStats } from './lib/stores/generalStatsStore.svelte.js';
 
@@ -31,6 +37,12 @@
 
   let forcedSpinIndex = $state(null);
   let isMobile = $state(false);
+
+  // Demo evento (Alghero): si apre solo con ?demo=alghero, non e' linkata da nessuna parte.
+  const isEventDemo = typeof window !== 'undefined'
+    && new URLSearchParams(window.location.search).get('demo') === 'alghero';
+  let stageMode = $state(false);   // finale sul palco: tutto piu' grande
+  let eventGame = $state(false);   // partita con il set di frasi dell'evento
   let showExitConfirm = $state(false);
   let diceRollData = $state(null); // {players: [{name, die1, die2}], ...metadata}
   let remoteRollIndex = $state(-1); // set when remote player rolls dice (online sync)
@@ -112,8 +124,22 @@
     };
   }
 
+  // Estrazione pesata: bancarotta ~3%, ogni PASSA ~4%, il resto equiripartito sui premi
+  const SPECIAL_SPIN_WEIGHTS = { bancarotta: 3, passa: 4 };
+
   function getWeightedSpinIndex() {
-    return Math.floor(Math.random() * currentSegments.length);
+    const specials = currentSegments.map(seg => SPECIAL_SPIN_WEIGHTS[seg.value] ?? null);
+    const specialTotal = specials.reduce((sum, w) => sum + (w ?? 0), 0);
+    const prizeCount = specials.filter(w => w === null).length;
+    const prizeWeight = Math.max(0, 100 - specialTotal) / Math.max(1, prizeCount);
+    const weights = specials.map(w => w ?? prizeWeight);
+    const total = weights.reduce((sum, w) => sum + w, 0);
+    let roll = Math.random() * total;
+    for (let i = 0; i < weights.length; i++) {
+      roll -= weights[i];
+      if (roll < 0) return i;
+    }
+    return weights.length - 1;
   }
 
   // Sync audio mute state from settings
@@ -187,6 +213,27 @@
     pendingSession = null;
   }
 
+  function handleDemoQualifiche() {
+    isDailyMode = false;
+    stageMode = false;
+    eventGame = true;
+    gameMode = 'evento';
+    generalStatsRecorded = false;
+    game.startGame(['Ospite'], EVENT_PHRASES.length, 'classico', null, null, EVENT_PHRASES);
+    analytics.trackGameStart({ mode: 'evento', playerCount: 1, seed: 'classico', rounds: EVENT_PHRASES.length });
+  }
+
+  function handleDemoPalco(names) {
+    isDailyMode = false;
+    stageMode = true;
+    eventGame = true;
+    gameMode = 'evento-palco';
+    generalStatsRecorded = false;
+    // Niente tiro dei dadi: sul palco il conduttore decide chi apre.
+    game.startGame(names, EVENT_PHRASES.length, 'classico', 0, null, EVENT_PHRASES);
+    analytics.trackGameStart({ mode: 'evento-palco', playerCount: names.length, seed: 'classico', rounds: EVENT_PHRASES.length });
+  }
+
   function handleDailyStart() {
     const phrase = daily.getDailyPhrase();
     isDailyMode = true;
@@ -239,18 +286,23 @@
     (isClient && game.currentPlayer.name === online.myName)
   );
 
+  // Timer visibile (anello sull'avatar attivo) solo nelle fasi in cui conta
+  let timerRunning = $derived(
+    game.isMultiplayer &&
+    game.turnTimer > 0 &&
+    ['idle', 'picking_consonant', 'picking_vowel', 'picking_jolly', 'solving'].includes(game.phase)
+  );
+
   // --- Wrapped game actions ---
   function handleStartSpin() {
     if (isClient) {
       online.sendAction('startSpin');
       return;
     }
-    if (isHost) {
-      // Pre-determine spin result so we can broadcast it immediately
-      const winIndex = getWeightedSpinIndex();
-      forcedSpinIndex = winIndex;
-      game.setSpinIndex(winIndex);
-    }
+    // L'esito pesato si decide qui (host o partita locale): la ruota riceve sempre l'indice
+    const winIndex = getWeightedSpinIndex();
+    forcedSpinIndex = winIndex;
+    game.setSpinIndex(winIndex);
     game.startSpin();
     if (isHost) hostBroadcast();
   }
@@ -385,8 +437,27 @@
   }
 
   function handleGoToMenu() {
+    // If exiting mid-daily-game, record it as a loss
+    if (isDailyMode && !dailyRecorded && game.phase !== 'game_over') {
+      captureDailySnapshot();
+      if (dailyPreSolveSnapshot) {
+        const snap = dailyPreSolveSnapshot;
+        daily.recordResult({
+          score: game.currentPlayer?.money ?? 0,
+          revealedCount: snap.revealedCount,
+          totalCount: snap.totalCount,
+          phraseText: snap.phraseText,
+          revealedLetters: snap.revealedLetters,
+          jollyPositions: snap.jollyPositions,
+          won: false,
+        });
+        dailyRecorded = true;
+      }
+    }
     game.goToMenu();
     clearSession();
+    stageMode = false;
+    eventGame = false;
     isDailyMode = false;
     dailyRecorded = false;
     dailyPreSolveSnapshot = null;
@@ -499,6 +570,22 @@
     remoteRollIndex = playerIndex;
   });
 
+  // Client: riallinea il countdown all'heartbeat del timer dell'host
+  online.onTimerSync(({ remainingMs }) => {
+    if (online.mode !== 'client' || game.phase === 'menu') return;
+    game.syncTimer(remainingMs);
+  });
+
+  // Host: heartbeat ~5s con i ms rimanenti del turno
+  $effect(() => {
+    if (!isHost || game.phase === 'menu') return;
+    const heartbeat = setInterval(() => {
+      const remaining = game.getTurnRemainingMs();
+      if (remaining != null) online.broadcastTimerSync(remaining);
+    }, 5000);
+    return () => clearInterval(heartbeat);
+  });
+
   function handleDiceRollBroadcast(playerIndex) {
     online.broadcastDiceRoll(playerIndex);
   }
@@ -532,7 +619,12 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div onclick={initAudio}>
-{#if game.phase === 'menu'}
+{#if game.phase === 'menu' && isEventDemo}
+  <EventDemoScreen
+    onQualifiche={handleDemoQualifiche}
+    onPalco={handleDemoPalco}
+  />
+{:else if game.phase === 'menu'}
   <StartScreen
     onStart={(names, rounds, seed) => {
       isDailyMode = false;
@@ -581,49 +673,29 @@
     onToggleAudio={toggleAudio}
   />
 {:else}
-  <div class="app">
+  <div class="app" class:stage={stageMode}>
     <header>
-      <div class="header-top">
-        <button class="btn-menu" onclick={handleBackButton} title="Torna al menu">← Menu</button>
-        <h1>Gira la Fortuna</h1>
-        <div class="header-right">
-          {#if isOnline}
-            <span class="online-indicator">ONLINE</span>
-            <span class="room-code-badge" title="Codice stanza">{online.roomCode}</span>
-          {/if}
-          {#if game.totalRounds > 1}
-            <span class="round-indicator">Round {game.currentRound}/{game.totalRounds}</span>
-          {/if}
-          <button class="btn-audio" onclick={toggleAudio} title={settings.soundEnabled ? 'Disattiva suoni' : 'Attiva suoni'}>
-            {settings.soundEnabled ? '🔊' : '🔇'}
-          </button>
+      <div class="header-left">
+        <button class="icon-btn" onclick={handleBackButton} title="Torna al menu" aria-label="Torna al menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
+        </button>
+        <div class="brand">
+          <SpicchiLogo size={22} />
+          <span class="brand-name">Gira la Fortuna</span>
         </div>
       </div>
-      {#if game.isMultiplayer}
-        <PlayersBar
-          players={game.players}
-          currentIndex={game.currentPlayerIndex}
-          totalScores={game.totalScores}
-          showTotal={game.totalRounds > 1}
-        />
-      {:else}
-        <ScoreDisplay
-          money={game.currentPlayer.money}
-          totalScore={game.totalScores[0] || 0}
-          showTotal={game.totalRounds > 1}
-        />
-      {/if}
-    </header>
-
-    {#if game.isMultiplayer}
-      <div class="turn-banner">
-        Turno di <strong>{game.currentPlayer.name}</strong>
-        {#if isOnline && isMyTurn}
-          <span class="your-turn-badge">Il tuo turno!</span>
+      <div class="header-right">
+        {#if isOnline}
+          <span class="online-tag" title="Codice stanza"><span class="online-dot"></span>Stanza {online.roomCode}</span>
         {/if}
-        <span class="timer" class:timer-warning={game.turnTimer <= 10}>{game.turnTimer}s</span>
+        {#if game.totalRounds > 1}
+          <span class="round-indicator">{eventGame ? 'Frase' : 'Round'} {game.currentRound} di {game.totalRounds}</span>
+        {/if}
+        <button class="icon-btn" onclick={toggleAudio} title={settings.soundEnabled ? 'Disattiva suoni' : 'Attiva suoni'}>
+          <Icon name={settings.soundEnabled ? 'audio-on' : 'audio-off'} size={18} />
+        </button>
       </div>
-    {/if}
+    </header>
 
     {#if online.hostDisconnected}
       <div class="disconnect-banner">
@@ -633,96 +705,127 @@
     {/if}
 
     <main>
-      <CategoryBanner category={game.phraseObj.category} />
-
-      <PuzzleBoard
-        phrase={game.phraseObj.text}
-        revealedLetters={game.revealedLetters}
-        jollyMode={game.phase === 'picking_jolly' && (!isOnline || isMyTurn)}
-        jollyRevealedPositions={game.jollyRevealedPositions}
-        onJollyPick={handleUseJolly}
-      />
-
-      {#if game.phase === 'picking_jolly' && (!isOnline || isMyTurn)}
-        <div class="jolly-overlay">
-          <div class="jolly-banner">
-            <span class="jolly-icon">J</span>
-            <span>JOLLY! Scegli una lettera sulla frase!</span>
-          </div>
-        </div>
-      {/if}
-
-      <div class="game-area">
+      <div class="wheel-col">
         <Wheel
           segments={currentSegments}
           spinning={game.phase === 'spinning'}
           canSpin={game.canSpin && (!isOnline || isMyTurn)}
-          forcedResult={isOnline ? forcedSpinIndex : null}
+          forcedResult={forcedSpinIndex}
           onSpin={handleStartSpin}
           onResult={handleSpinResult}
         />
 
-        <div class="actions">
-          <GameControls
-            canSpin={game.canSpin && (!isOnline || isMyTurn)}
-            canBuyVowel={game.canBuyVowel && (!isOnline || isMyTurn)}
-            canSolve={game.canSolve && (!isOnline || isMyTurn)}
-            showBuyVowel={game.vowelsLeft && !game.hasBoughtVowelThisRound}
-            onSpin={handleStartSpin}
-            onBuyVowel={handleStartBuyVowel}
-            onSolve={handleStartSolve}
-            playerName={game.isMultiplayer ? game.currentPlayer.name : ''}
-          />
+        <GameControls
+          canSpin={game.canSpin && (!isOnline || isMyTurn)}
+          canBuyVowel={game.canBuyVowel && (!isOnline || isMyTurn)}
+          canSolve={game.canSolve && (!isOnline || isMyTurn)}
+          showBuyVowel={game.vowelsLeft && !game.hasBoughtVowelThisRound}
+          onSpin={handleStartSpin}
+          onBuyVowel={handleStartBuyVowel}
+          onSolve={handleStartSolve}
+          playerName={game.isMultiplayer ? game.currentPlayer.name : ''}
+        />
 
-          {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
-            <p class="step-hint">
-              {#if !game.consonantsLeft && !game.vowelsLeft}
-                Tutte le lettere note — risolvi la frase!
-              {:else if !game.consonantsLeft}
-                Nessuna consonante rimasta — compra una vocale o risolvi!
-              {:else if !game.hasSpunThisTurn}
-                Gira la ruota per iniziare il turno
-              {:else}
-                Puoi girare di nuovo, comprare una vocale o risolvere
+        {#if isOnline && !isMyTurn && game.phase !== 'idle'}
+          <div class="waiting-opponent">
+            <p class="waiting-text">
+              {#if game.phase === 'spinning'}
+                {game.currentPlayer.name} sta girando la ruota...
+              {:else if game.phase === 'picking_consonant'}
+                {game.currentPlayer.name} sta scegliendo una consonante...
+              {:else if game.phase === 'picking_vowel'}
+                {game.currentPlayer.name} sta comprando una vocale...
+              {:else if game.phase === 'picking_jolly'}
+                {game.currentPlayer.name} sta usando il Jolly...
+              {:else if game.phase === 'solving'}
+                {game.currentPlayer.name} sta provando a risolvere...
               {/if}
             </p>
-          {:else if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
-            <p class="step-hint highlight">Valore: {game.currentSpinValue}€ — scegli una consonante!</p>
-          {:else if isOnline && !isMyTurn && game.phase !== 'idle'}
-            <div class="waiting-opponent">
-              <p class="waiting-text">
-                {#if game.phase === 'spinning'}
-                  {game.currentPlayer.name} sta girando la ruota...
-                {:else if game.phase === 'picking_consonant'}
-                  {game.currentPlayer.name} sta scegliendo una consonante...
-                {:else if game.phase === 'picking_vowel'}
-                  {game.currentPlayer.name} sta comprando una vocale...
-                {:else if game.phase === 'picking_jolly'}
-                  {game.currentPlayer.name} sta usando il Jolly...
-                {:else if game.phase === 'solving'}
-                  {game.currentPlayer.name} sta provando a risolvere...
-                {/if}
-              </p>
+          </div>
+        {/if}
+      </div>
+
+      <div class="board-col">
+        <div class="board-head">
+          <CategoryBanner category={game.phraseObj.category} />
+          {#if game.isMultiplayer}
+            <span class="turn-text">
+              {#if isOnline && isMyTurn}
+                Tocca a te, <strong>{game.currentPlayer.name}</strong>
+              {:else}
+                Tocca a <strong>{game.currentPlayer.name}</strong>
+              {/if}
+            </span>
+          {/if}
+        </div>
+
+        <PuzzleBoard
+          phrase={game.phraseObj.text}
+          revealedLetters={game.revealedLetters}
+          jollyMode={game.phase === 'picking_jolly' && (!isOnline || isMyTurn)}
+          jollyRevealedPositions={game.jollyRevealedPositions}
+          onJollyPick={handleUseJolly}
+        />
+
+        {#if game.phase === 'picking_jolly' && (!isOnline || isMyTurn)}
+          <div class="jolly-overlay">
+            <div class="jolly-banner">
+              <span class="jolly-icon">J</span>
+              <span>JOLLY! Scegli una lettera sulla frase!</span>
             </div>
+          </div>
+        {/if}
+
+        {#if game.isMultiplayer}
+          <PlayersBar
+            players={game.players}
+            currentIndex={game.currentPlayerIndex}
+            totalScores={game.totalScores}
+            showTotal={game.totalRounds > 1}
+            timerSeconds={game.turnTimer}
+            timerTotal={settings.timerSeconds}
+            timerActive={timerRunning}
+          />
+        {:else}
+          <ScoreDisplay
+            money={game.currentPlayer.money}
+            totalScore={game.totalScores[0] || 0}
+            showTotal={game.totalRounds > 1}
+          />
+        {/if}
+
+        {#if game.phase === 'idle' && (!isOnline || isMyTurn)}
+          <p class="step-hint">
+            {#if !game.consonantsLeft && !game.vowelsLeft}
+              Tutte le lettere sono note: risolvi la frase
+            {:else if !game.consonantsLeft}
+              Niente più consonanti: compra una vocale o risolvi
+            {:else if !game.hasSpunThisTurn}
+              Gira la ruota per iniziare il turno
+            {:else}
+              Puoi girare di nuovo, comprare una vocale o risolvere
+            {/if}
+          </p>
+        {:else if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
+          <p class="step-hint highlight">Vale {formatEuro(game.currentSpinValue)} a lettera: scegli una consonante</p>
+        {/if}
+
+        <div class="picker-desktop">
+          {#if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
+            <LetterPicker
+              mode="consonant"
+              usedLetters={game.usedLetters}
+              onPick={handlePickConsonant}
+            />
           {/if}
 
-          <div class="picker-desktop">
-            {#if game.phase === 'picking_consonant' && (!isOnline || isMyTurn)}
-              <LetterPicker
-                mode="consonant"
-                usedLetters={game.usedLetters}
-                onPick={handlePickConsonant}
-              />
-            {/if}
-
-            {#if game.phase === 'picking_vowel' && (!isOnline || isMyTurn)}
-              <LetterPicker
-                mode="vowel"
-                usedLetters={game.usedLetters}
-                onPick={handleBuyVowel}
-              />
-            {/if}
-          </div>
+          {#if game.phase === 'picking_vowel' && (!isOnline || isMyTurn)}
+            <LetterPicker
+              mode="vowel"
+              usedLetters={game.usedLetters}
+              onPick={handleBuyVowel}
+            />
+          {/if}
         </div>
       </div>
     </main>
@@ -744,6 +847,8 @@
         players={game.players}
         isMultiplayer={game.isMultiplayer}
         phrase={game.phraseObj.text}
+        category={game.phraseObj.category}
+        song={game.phraseObj.song}
         currentRound={game.currentRound}
         totalRounds={game.totalRounds}
         totalScores={game.totalScores}
@@ -761,6 +866,8 @@
         players={game.players}
         isMultiplayer={game.isMultiplayer}
         phrase={game.phraseObj.text}
+        category={game.phraseObj.category}
+        song={game.phraseObj.song}
         currentRound={game.currentRound}
         totalRounds={game.totalRounds}
         totalScores={game.totalScores}
@@ -800,163 +907,120 @@
   onCancel={handleCancelExit}
 />
 <CookieBanner />
+
+{#if game.phase === 'menu' && !isEventDemo}
+  <InstallBanner />
+{/if}
 </div>
 
 <style>
   .app {
     min-height: 100vh;
-    padding: 1rem;
-    max-width: 900px;
+    max-width: 1280px;
     margin: 0 auto;
+    padding: 0 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+  }
+  /* Glow atmosferico (tavola Partita): l'atmosfera la fanno il glow radiale e la ruota */
+  .app::before {
+    content: '';
+    position: fixed;
+    left: -200px;
+    bottom: -300px;
+    width: 900px;
+    height: 900px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(245,182,63,0.08) 0%, rgba(10,14,35,0) 65%);
+    pointer-events: none;
+    z-index: -1;
   }
   header {
     display: flex;
-    flex-direction: column;
-    gap: 0.6rem;
-    margin-bottom: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 1.6rem;
+    gap: 1rem;
   }
-  .header-top {
+  .header-left {
     display: flex;
     align-items: center;
     gap: 1rem;
   }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .brand-name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: var(--glass-strong);
+    border: 1px solid var(--glass-border-strong);
+    color: rgba(244,242,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover {
+    background: rgba(244,242,255,0.1);
+    color: var(--text);
+  }
   .header-right {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
-    margin-left: auto;
+    gap: 0.8rem;
   }
-  .online-indicator {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.75rem;
+  .online-tag {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
     font-weight: 600;
-    color: #4CAF50;
-    background: rgba(76,175,80,0.15);
-    border: 1px solid rgba(76,175,80,0.3);
-    border-radius: 6px;
-    padding: 0.2rem 0.5rem;
-    letter-spacing: 1px;
-  }
-  .room-code-badge {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #ffd700;
-    background: rgba(255,215,0,0.1);
-    border: 1px solid rgba(255,215,0,0.3);
-    border-radius: 6px;
-    padding: 0.2rem 0.6rem;
-    letter-spacing: 2px;
-    cursor: default;
+    color: var(--mint);
     user-select: all;
-  }
-  .round-indicator {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.85rem;
-    color: #ffd700;
-    background: rgba(255,215,0,0.1);
-    border: 1px solid rgba(255,215,0,0.25);
-    border-radius: 6px;
-    padding: 0.2rem 0.6rem;
     white-space: nowrap;
   }
-  .btn-audio {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 0.3rem 0.5rem;
-    cursor: pointer;
-    font-size: 1.1rem;
-    line-height: 1;
-    transition: all 0.2s;
-  }
-  .btn-audio:hover {
-    background: rgba(255,255,255,0.15);
-  }
-  .btn-menu {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: rgba(255,255,255,0.6);
-    padding: 0.35rem 0.8rem;
-    border-radius: 6px;
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.2s;
+  .online-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--mint);
     flex-shrink: 0;
   }
-  .btn-menu:hover {
-    background: rgba(255,255,255,0.12);
-    color: #fff;
-  }
-  h1 {
-    font-family: 'Oswald', sans-serif;
-    color: #ffd700;
-    font-size: 1.6rem;
-    font-weight: 700;
-    text-shadow: 0 2px 10px rgba(255,215,0,0.3);
-    margin: 0;
-    letter-spacing: 1px;
-  }
-  .turn-banner {
-    text-align: center;
-    padding: 0.5rem;
-    background: rgba(255,215,0,0.08);
-    border: 1px solid rgba(255,215,0,0.2);
-    border-radius: 8px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    color: rgba(255,255,255,0.8);
-    margin-bottom: 0.5rem;
-  }
-  .turn-banner strong {
-    color: #ffd700;
-  }
-  .your-turn-badge {
-    display: inline-block;
-    background: rgba(76,175,80,0.2);
-    color: #4CAF50;
-    font-size: 0.85rem;
-    padding: 0.1rem 0.5rem;
-    border-radius: 4px;
-    margin-left: 0.5rem;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 0.7; }
-    50% { opacity: 1; }
-  }
-  .timer {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #4CAF50;
-    background: rgba(76,175,80,0.12);
-    padding: 0.15rem 0.6rem;
-    border-radius: 6px;
-    margin-left: 0.8rem;
-    min-width: 3rem;
-    text-align: center;
-    transition: color 0.3s, background 0.3s;
-  }
-  .timer-warning {
-    color: #ff5252;
-    background: rgba(255,82,82,0.15);
-    animation: timerPulse 0.8s ease-in-out infinite;
-  }
-  @keyframes timerPulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+  .round-indicator {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    white-space: nowrap;
   }
   .disconnect-banner {
     text-align: center;
     padding: 1rem;
-    background: rgba(255,82,82,0.15);
-    border: 2px solid rgba(255,82,82,0.4);
-    border-radius: 10px;
-    color: #ff5252;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
+    background: rgba(255,93,115,0.1);
+    border: 1px solid rgba(255,93,115,0.4);
+    border-radius: var(--radius);
+    color: var(--coral);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 1rem;
     margin-bottom: 1rem;
     display: flex;
     flex-direction: column;
@@ -964,38 +1028,52 @@
     gap: 0.8rem;
   }
   .back-to-menu-btn {
-    background: rgba(255,82,82,0.2);
-    border: 1px solid rgba(255,82,82,0.4);
-    color: #ff5252;
+    background: rgba(255,93,115,0.15);
+    border: 1px solid rgba(255,93,115,0.4);
+    color: var(--coral);
     padding: 0.4rem 1.2rem;
-    border-radius: 6px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
+    border-radius: 10px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
   }
   .back-to-menu-btn:hover {
-    background: rgba(255,82,82,0.3);
+    background: rgba(255,93,115,0.25);
   }
   main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(380px, 460px) minmax(0, 1fr);
+    gap: 3rem;
+    align-items: center;
+  }
+  .wheel-col {
     display: flex;
     flex-direction: column;
-    gap: 1.2rem;
+    align-items: center;
+    gap: 1.5rem;
   }
-  .game-area {
+  .board-col {
     display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 2rem;
+    flex-direction: column;
+    gap: 1.3rem;
+    min-width: 0;
+  }
+  .board-head {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
     flex-wrap: wrap;
   }
-  .actions {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    flex: 1;
-    min-width: 280px;
-    justify-content: center;
+  .turn-text {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--text-dim);
+  }
+  .turn-text strong {
+    color: var(--amber);
   }
 
   /* Jolly overlay banner */
@@ -1007,20 +1085,22 @@
     display: inline-flex;
     align-items: center;
     gap: 0.8rem;
-    background: linear-gradient(135deg, rgba(0,137,123,0.2), rgba(0,230,118,0.1));
-    border: 2px solid rgba(0,230,118,0.4);
-    border-radius: 12px;
+    background: rgba(51,214,181,0.1);
+    border: 1.5px solid rgba(51,214,181,0.45);
+    border-radius: var(--radius);
     padding: 0.8rem 1.5rem;
     animation: jollyPulse 1.5s ease-in-out infinite;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
-    color: #00e676;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--mint);
   }
   .jolly-icon {
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     font-weight: 700;
-    color: #00897B;
-    background: rgba(0,137,123,0.2);
+    font-family: var(--font-display);
+    color: var(--mint);
+    background: rgba(51,214,181,0.15);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -1029,29 +1109,45 @@
     justify-content: center;
   }
   @keyframes jollyPulse {
-    0%, 100% { box-shadow: 0 0 10px rgba(0,230,118,0.1); }
-    50% { box-shadow: 0 0 25px rgba(0,230,118,0.3); }
+    0%, 100% { box-shadow: 0 0 10px rgba(51,214,181,0.1); }
+    50% { box-shadow: 0 0 25px rgba(51,214,181,0.3); }
+  }
+
+  /* Finale sul palco: tutto piu' grande, per essere letto da lontano su
+     ledwall/proiettore. Su schermi piccoli resta la resa normale. */
+  .app.stage {
+    max-width: none;
+  }
+  @media (min-width: 1400px) {
+    .app.stage header,
+    .app.stage main {
+      zoom: 1.2;
+    }
+  }
+  @media (min-width: 1800px) {
+    .app.stage header,
+    .app.stage main {
+      zoom: 1.4;
+    }
   }
 
   .step-hint {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.82rem;
-    color: rgba(255,215,0,0.65);
+    font-family: var(--font-display);
+    font-size: 1.12rem;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--amber);
     text-align: center;
-    padding: 0.4rem 0.8rem;
-    border: 1px solid rgba(255,215,0,0.12);
-    border-radius: 8px;
-    background: rgba(255,215,0,0.04);
+    padding: 0.2rem 0;
     margin: 0;
   }
   .step-hint.highlight {
-    color: #00e676;
-    border-color: rgba(0,230,118,0.2);
-    background: rgba(0,230,118,0.04);
+    color: var(--mint);
   }
 
-  /* Desktop only: picker beside wheel */
-  .picker-desktop { display: contents; }
+  .picker-desktop {
+    display: contents;
+  }
 
   /* Waiting for opponent (online) */
   .waiting-opponent {
@@ -1059,15 +1155,27 @@
     align-items: center;
     gap: 0.8rem;
     padding: 0.8rem 1.2rem;
-    background: rgba(255,215,0,0.05);
-    border: 1px solid rgba(255,215,0,0.15);
-    border-radius: 10px;
-    margin-top: 0.5rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
   }
   .waiting-text {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.95rem;
-    color: rgba(255,215,0,0.7);
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-dim);
     margin: 0;
+  }
+
+  @media (max-width: 980px) {
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 1.6rem;
+      align-items: stretch;
+    }
+    .board-col {
+      order: -1;
+    }
   }
 </style>

@@ -1,23 +1,51 @@
 <script>
-  let { players = [], currentIndex = 0, totalScores = [], showTotal = false } = $props();
+  import TimerRing from './TimerRing.svelte';
+  import { getPlayerAccent } from '../lib/utils/playerAccents.js';
+  import { formatEuro } from '../lib/utils/format.js';
+
+  let {
+    players = [],
+    currentIndex = 0,
+    totalScores = [],
+    showTotal = false,
+    timerSeconds = null,
+    timerTotal = 30,
+    timerActive = false,
+  } = $props();
+
+  let fraction = $derived(timerTotal > 0 ? (timerSeconds ?? 0) / timerTotal : 0);
+  let warning = $derived(timerActive && timerSeconds != null && timerSeconds <= 10);
 </script>
 
 <div class="players-bar">
   {#each players as player, i}
-    <div class="player" class:active={i === currentIndex}>
-      <div class="avatar">{player.name.charAt(0).toUpperCase()}</div>
+    {@const accent = getPlayerAccent(i)}
+    {@const active = i === currentIndex}
+    <div class="player" class:active>
+      {#if active}
+        <TimerRing
+          size={52}
+          initial={player.name.charAt(0).toUpperCase()}
+          accentSolid={accent.solid}
+          accentOn={accent.onSolid}
+          {fraction}
+          {warning}
+          showRing={timerActive}
+        />
+      {:else}
+        <div class="avatar" style={`background: ${accent.bg}; color: ${accent.text};`}>
+          {player.name.charAt(0).toUpperCase()}
+        </div>
+      {/if}
       <div class="info">
         <span class="name">{player.name}</span>
-        <span class="money">{player.money.toLocaleString('it-IT')} €</span>
+        <span class="money">{formatEuro(player.money)}</span>
         {#if showTotal}
-          <span class="total">Tot: {(totalScores[i] || 0).toLocaleString('it-IT')} €</span>
+          <span class="total">Tot: {formatEuro(totalScores[i] || 0)}</span>
         {/if}
       </div>
-      {#if player.hasJolly}
-        <span class="jolly" title="Jolly">J</span>
-      {/if}
-      {#if i === currentIndex}
-        <div class="turn-indicator"></div>
+      {#if active && timerActive && timerSeconds != null}
+        <span class="countdown" class:warning>{timerSeconds}<span class="unit">s</span></span>
       {/if}
     </div>
   {/each}
@@ -26,95 +54,96 @@
 <style>
   .players-bar {
     display: flex;
-    gap: 0.6rem;
+    gap: 0.8rem;
     justify-content: center;
     flex-wrap: wrap;
   }
   .player {
+    flex: 1;
+    min-width: 150px;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0.8rem;
-    background: rgba(255,255,255,0.06);
-    border: 2px solid rgba(255,255,255,0.1);
-    border-radius: 10px;
-    position: relative;
+    gap: 0.8rem;
+    padding: 0.75rem 1rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
     transition: all 0.3s;
-    min-width: 130px;
   }
   .player.active {
-    background: rgba(255,215,0,0.1);
-    border-color: #ffd700;
-    box-shadow: 0 0 15px rgba(255,215,0,0.15);
+    background: rgba(245,182,63,0.08);
+    border: 1.5px solid rgba(245,182,63,0.55);
+    flex-grow: 1.5;
+    min-width: 210px;
+  }
+  .player.active .info {
+    flex: 1;
   }
   .avatar {
-    width: 34px;
-    height: 34px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #283593, #1a237e);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
     font-weight: 700;
-    color: #ffd700;
     flex-shrink: 0;
-  }
-  .player.active .avatar {
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
   }
   .info {
     display: flex;
     flex-direction: column;
-    line-height: 1.2;
+    gap: 1px;
+    line-height: 1.25;
+    min-width: 0;
   }
   .name {
-    font-family: 'Oswald', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.85rem;
-    color: rgba(255,255,255,0.8);
+    color: rgba(244,242,255,0.8);
     font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .player.active .name {
-    color: #ffd700;
+    color: var(--text);
+    font-weight: 700;
   }
   .money {
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
-    color: #ffd700;
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    color: rgba(244,242,255,0.6);
     font-weight: 700;
+  }
+  .player.active .money {
+    color: var(--amber);
   }
   .total {
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.75rem;
-    color: #4CAF50;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--mint);
     font-weight: 600;
   }
-  .jolly {
-    background: #ffd700;
-    color: #1a237e;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Oswald', sans-serif;
-    font-size: 0.75rem;
+  .countdown {
+    margin-left: auto;
+    padding-left: 0.4rem;
+    font-family: var(--font-display);
     font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--amber);
     flex-shrink: 0;
   }
-  .turn-indicator {
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 6px solid transparent;
-    border-right: 6px solid transparent;
-    border-bottom: 6px solid #ffd700;
-    transform: translateX(-50%) rotate(180deg);
+  .countdown .unit {
+    font-size: 0.65rem;
+  }
+  .countdown.warning {
+    color: var(--coral);
+    animation: countPulse 0.8s ease-in-out infinite;
+  }
+  @keyframes countPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
   }
 </style>

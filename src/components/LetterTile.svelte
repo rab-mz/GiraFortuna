@@ -48,66 +48,64 @@
   }
   .tile-wrap.clickable .tile {
     animation: jollyPulse 1.2s ease-in-out infinite;
-    border-color: rgba(0,230,118,0.6);
-    box-shadow: 0 0 12px rgba(0,230,118,0.3);
+    border-color: rgba(51,214,181,0.6);
+    box-shadow: 0 0 12px rgba(51,214,181,0.3);
   }
   .tile-wrap.clickable:hover .tile,
   .tile-wrap.clickable:active .tile {
-    border-color: #00e676;
-    box-shadow: 0 0 20px rgba(0,230,118,0.5);
+    border-color: var(--mint);
+    box-shadow: 0 0 20px rgba(51,214,181,0.5);
     transform: scale(1.1);
   }
   .tile {
-    width: 38px;
-    height: 48px;
+    width: 40px;
+    height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.4rem;
+    font-family: var(--font-display);
+    font-size: 1.3rem;
     font-weight: 700;
-    border-radius: 4px;
+    border-radius: 7px;
     transition: all 0.3s ease;
   }
   .letter {
-    background: var(--tile-bg, #0d47a1);
-    border: 2px solid rgba(255,255,255,0.2);
+    background: var(--tile-bg);
+    border: 1px solid var(--tile-border);
     color: transparent;
-    box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
   }
   .letter.revealed {
-    background: var(--tile-revealed, #e3f2fd);
-    color: var(--tile-letter, #1a237e);
-    border-color: rgba(255,215,0,0.5);
-    box-shadow: 0 0 10px rgba(255,215,0,0.3);
+    background: var(--tile-revealed);
+    color: var(--tile-letter);
+    border-color: transparent;
     animation: flipIn 0.5s ease;
   }
   .letter.jolly-revealed {
-    background: #e8f5e9;
-    color: #1b5e20;
-    border-color: rgba(0,230,118,0.6);
-    box-shadow: 0 0 10px rgba(0,230,118,0.3);
+    background: var(--tile-revealed);
+    color: var(--tile-letter);
+    border: 2px solid rgba(51,214,181,0.7);
+    box-shadow: 0 0 10px rgba(51,214,181,0.3);
     animation: flipIn 0.5s ease;
   }
   .punctuation {
     background: transparent;
-    color: rgba(255,255,255,0.7);
-    font-size: 1.2rem;
+    color: var(--text-dim);
+    font-size: 1.1rem;
   }
   .spacer {
     width: 18px;
-    height: 48px;
+    height: 50px;
   }
   .jolly-badge {
     position: absolute;
     bottom: -10px;
-    font-family: 'Oswald', sans-serif;
+    font-family: var(--font-ui);
     font-size: 0.6rem;
     font-weight: 700;
-    color: #00897B;
-    background: rgba(0,137,123,0.15);
-    border: 1px solid rgba(0,137,123,0.4);
-    border-radius: 3px;
+    color: var(--mint);
+    background: rgba(51,214,181,0.12);
+    border: 1px solid rgba(51,214,181,0.4);
+    border-radius: 4px;
     padding: 0 3px;
     line-height: 1.2;
   }
@@ -116,19 +114,20 @@
     100% { transform: rotateY(0deg); opacity: 1; }
   }
   @keyframes jollyPulse {
-    0%, 100% { box-shadow: 0 0 8px rgba(0,230,118,0.2); }
-    50% { box-shadow: 0 0 16px rgba(0,230,118,0.5); }
+    0%, 100% { box-shadow: 0 0 8px rgba(51,214,181,0.2); }
+    50% { box-shadow: 0 0 16px rgba(51,214,181,0.5); }
   }
 
   @media (max-width: 480px) {
     .tile {
-      width: 30px;
-      height: 38px;
-      font-size: 1.1rem;
+      width: 28px;
+      height: 36px;
+      font-size: 0.95rem;
+      border-radius: 5px;
     }
     .spacer {
       width: 12px;
-      height: 38px;
+      height: 36px;
     }
     .jolly-badge {
       font-size: 0.5rem;

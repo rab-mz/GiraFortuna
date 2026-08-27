@@ -36,7 +36,7 @@
   .overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(4, 6, 18, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -45,9 +45,9 @@
     padding: 1rem;
   }
   .modal {
-    background: linear-gradient(135deg, #1a237e, #283593);
-    border: 2px solid #ff5252;
-    border-radius: 16px;
+    background: var(--indigo);
+    border: 1px solid rgba(255,93,115,0.45);
+    border-radius: var(--radius-lg);
     padding: 2rem;
     max-width: 400px;
     width: 90%;
@@ -55,15 +55,15 @@
     text-align: center;
   }
   h2 {
-    color: #ff5252;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.5rem;
+    color: var(--coral);
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
     margin: 0 0 1rem;
-    letter-spacing: 1px;
   }
   .warning-text {
-    color: rgba(255,255,255,0.75);
-    font-family: 'Inter', sans-serif;
+    color: var(--text-dim);
+    font-family: var(--font-ui);
     font-size: 0.95rem;
     line-height: 1.5;
     margin: 0 0 1.5rem;
@@ -74,39 +74,41 @@
     justify-content: center;
   }
   .btn-stay {
-    padding: 0.8rem 2rem;
-    background: linear-gradient(135deg, #ffd700, #e6b800);
-    color: #1a237e;
+    padding: 0.8rem 1.8rem;
+    background: var(--amber);
+    color: var(--ink);
     border: none;
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1.1rem;
+    border-radius: 14px;
+    font-family: var(--font-display);
+    font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 1px;
-    transition: transform 0.2s;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
   }
   .btn-stay:hover {
-    transform: scale(1.05);
+    background: var(--amber-bright);
+    transform: scale(1.04);
   }
   .btn-exit {
     padding: 0.8rem 1.5rem;
-    background: rgba(255,82,82,0.15);
-    color: #ff5252;
-    border: 1px solid rgba(255,82,82,0.4);
-    border-radius: 10px;
-    font-family: 'Oswald', sans-serif;
-    font-size: 1rem;
+    background: rgba(255,93,115,0.12);
+    color: var(--coral);
+    border: 1px solid rgba(255,93,115,0.4);
+    border-radius: 14px;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 0.95rem;
     cursor: pointer;
     transition: all 0.2s;
   }
   .btn-exit:hover {
-    background: rgba(255,82,82,0.25);
+    background: rgba(255,93,115,0.22);
   }
 
   @media (max-width: 480px) {
     .modal { padding: 1.5rem; }
-    h2 { font-size: 1.3rem; }
+    h2 { font-size: 1.1rem; }
     .buttons { flex-direction: column; }
   }
 </style>
