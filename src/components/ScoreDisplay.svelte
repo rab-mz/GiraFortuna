@@ -51,4 +51,12 @@
   .total-amount {
     color: var(--mint);
   }
+  @media (min-width: 981px) {
+    .score {
+      padding: 0.8rem 2rem;
+    }
+    .amount {
+      font-size: 1.8rem;
+    }
+  }
 </style>

@@ -508,6 +508,10 @@
   .picker-area {
     width: 100%;
     padding: 0.3rem 0;
+    /* sopra la sfumatura in fondo: sugli schermi bassi le ultime lettere
+       finivano dentro il gradiente e si leggevano a malapena */
+    position: relative;
+    z-index: 41;
   }
   .picker-hint {
     text-align: center;
@@ -588,7 +592,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    height: calc(190px + env(safe-area-inset-bottom, 0px));
+    height: calc(205px + env(safe-area-inset-bottom, 0px));
     z-index: 39;
     pointer-events: none;
     background: linear-gradient(
@@ -604,8 +608,8 @@
     right: 0;
     bottom: 0;
     z-index: 40;
-    padding: 1.6rem 0.6rem 0.6rem;
-    padding-bottom: calc(0.6rem + env(safe-area-inset-bottom, 0px));
+    padding: 1.6rem 0.6rem 1.5rem;
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
     background: none;
   }
 

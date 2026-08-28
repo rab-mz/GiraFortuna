@@ -28,8 +28,8 @@
   --font-ui: 'Instrument Sans', system-ui, sans-serif;
 
   /* Tessere del tabellone */
-  --tile-bg: rgba(244, 242, 255, 0.06);
-  --tile-border: rgba(244, 242, 255, 0.12);
+  --tile-bg: rgba(244, 242, 255, 0.10);
+  --tile-border: rgba(244, 242, 255, 0.22);
   --tile-revealed: #F7F3E8;
   --tile-letter: #14102A;
 }

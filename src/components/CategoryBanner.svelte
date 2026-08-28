@@ -16,7 +16,7 @@
   }
   .label {
     font-family: var(--font-ui);
-    font-size: 0.68rem;
+    font-size: 0.74rem;
     font-weight: 600;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -26,7 +26,7 @@
   .value {
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 1.28rem;
+    font-size: 2.1rem;
     line-height: 1.15;
     color: var(--amber);
   }
@@ -35,8 +35,11 @@
       align-items: center;
       text-align: center;
     }
+    .label {
+      font-size: 0.68rem;
+    }
     .value {
-      font-size: 1.05rem;
+      font-size: 1.28rem;
     }
   }
 </style>

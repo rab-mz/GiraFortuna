@@ -40,7 +40,12 @@
     const w = window.innerWidth;
     if (w <= 400) cssSize = Math.min(w - 40, 260);
     else if (w <= 640) cssSize = 300;
-    else cssSize = 440;
+    else if (w <= 980) cssSize = 440;
+    else {
+      // Desktop: la ruota cresce con la finestra (etichette piu' leggibili via
+      // labelScale), ma resta dentro l'altezza per non far scrollare la pagina
+      cssSize = Math.round(Math.max(420, Math.min(560, w * 0.28, window.innerHeight - 320)));
+    }
   }
 
   // Resize listener

@@ -917,7 +917,7 @@
 <style>
   .app {
     min-height: 100vh;
-    max-width: 1280px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 2rem 2rem;
     display: flex;
@@ -1046,7 +1046,7 @@
   main {
     flex: 1;
     display: grid;
-    grid-template-columns: minmax(380px, 460px) minmax(0, 1fr);
+    grid-template-columns: minmax(380px, 580px) minmax(0, 1fr);
     gap: 3rem;
     align-items: center;
   }

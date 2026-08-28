@@ -135,4 +135,17 @@
       bottom: -8px;
     }
   }
+
+  /* Desktop: caselle piu' grandi (in sincrono con le metrics del tabellone) */
+  @media (min-width: 981px) {
+    .tile {
+      width: var(--tile-w, 46px);
+      height: var(--tile-h, 58px);
+      font-size: var(--tile-font, 1.45rem);
+    }
+    .spacer {
+      width: 20px;
+      height: var(--tile-h, 58px);
+    }
+  }
 </style>

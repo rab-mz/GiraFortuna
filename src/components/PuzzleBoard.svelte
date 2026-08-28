@@ -16,17 +16,27 @@
   // --- Impaginazione delle righe (logica in lib/utils/boardLayout.js) ---
   let boardW = $state(0);
   let isSmall = $state(false);
+  let isLarge = $state(false);
   $effect(() => {
-    const mq = window.matchMedia('(max-width: 480px)');
-    isSmall = mq.matches;
-    const h = (e) => { isSmall = e.matches; };
-    mq.addEventListener('change', h);
-    return () => mq.removeEventListener('change', h);
+    const mqSmall = window.matchMedia('(max-width: 480px)');
+    const mqLarge = window.matchMedia('(min-width: 981px)');
+    isSmall = mqSmall.matches;
+    isLarge = mqLarge.matches;
+    const hs = (e) => { isSmall = e.matches; };
+    const hl = (e) => { isLarge = e.matches; };
+    mqSmall.addEventListener('change', hs);
+    mqLarge.addEventListener('change', hl);
+    return () => {
+      mqSmall.removeEventListener('change', hs);
+      mqLarge.removeEventListener('change', hl);
+    };
   });
 
   let metrics = $derived(isSmall
     ? { tile: 28, gap: 2, space: 10, boardGap: 2 }
-    : { tile: 40, gap: 5, space: 14, boardGap: 6 });
+    : isLarge
+      ? { tile: 46, gap: 5, space: 16, boardGap: 6 }
+      : { tile: 40, gap: 5, space: 14, boardGap: 6 });
 
   // arrotondata: senza, una variazione di un pixel rifa' l'impaginazione e le
   // caselle sembrano "ricaricarsi"
@@ -44,8 +54,8 @@
 
   let tileStyle = $derived(scala === 1 ? '' : [
     `--tile-w: ${(metrics.tile * scala).toFixed(1)}px`,
-    `--tile-h: ${((isSmall ? 36 : 50) * scala).toFixed(1)}px`,
-    `--tile-font: ${((isSmall ? 0.95 : 1.3) * scala).toFixed(2)}rem`,
+    `--tile-h: ${((isSmall ? 36 : isLarge ? 58 : 50) * scala).toFixed(1)}px`,
+    `--tile-font: ${((isSmall ? 0.95 : isLarge ? 1.45 : 1.3) * scala).toFixed(2)}rem`,
   ].join('; '));
 
   // Build absolute index mapping
@@ -162,5 +172,10 @@
     .line { gap: 2px; }
     .word { gap: 2px; }
     .word-space { width: 10px; }
+  }
+
+  /* Desktop: caselle piu' grandi (le misure devono combaciare con metrics) */
+  @media (min-width: 981px) {
+    .word-space { width: 16px; }
   }
 </style>

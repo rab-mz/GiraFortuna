@@ -97,4 +97,18 @@
   .solve:hover:not(:disabled) {
     background: rgba(124,108,255,0.2);
   }
+  @media (min-width: 981px) {
+    .controls {
+      max-width: 420px;
+    }
+    .spin {
+      height: 64px;
+      font-size: 1.1rem;
+    }
+    .vowel,
+    .solve {
+      height: 52px;
+      font-size: 0.95rem;
+    }
+  }
 </style>
